@@ -1,4 +1,6 @@
 ﻿using System;
+using JetBrains.Annotations;
+using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
@@ -9,14 +11,13 @@ namespace Systems.SimpleInventory.Data.Items
     ///     Basic class for inventory items - should be used as base for all inventory items
     ///     with custom logic.
     /// </summary>
-    [Serializable] 
-    public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<ItemID>
+    [Serializable] public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<ItemID>
     {
         /// <summary>
         ///     Identifier of this item
         /// </summary>
         [field: SerializeField] public ItemID Identifier { get; private set; } = ItemID.New();
-        
+
         /// <summary>
         ///     Maximum stack count for this item.
         /// </summary>
@@ -26,12 +27,12 @@ namespace Systems.SimpleInventory.Data.Items
         ///     Prefab of the item when dropped
         /// </summary>
         [field: SerializeField] public GameObject DroppedItemPrefab { get; private set; }
-        
+
         /// <summary>
         ///     Checks if this item is equippable
         /// </summary>
         public bool IsEquippable => this is EquippableItemBase;
-        
+
         /// <summary>
         ///     Checks if this item is usable
         /// </summary>
@@ -59,19 +60,84 @@ namespace Systems.SimpleInventory.Data.Items
         ///     Event called when item is picked up
         /// </summary>
         /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickedUp(PickupItemContext context){}
+        protected internal virtual void OnPickedUp(PickupItemContext context)
+        {
+        }
 
         /// <summary>
         ///     Event called when item pickup fails
         /// </summary>
         /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickupFailed(PickupItemContext context){}
-        
+        protected internal virtual void OnPickupFailed(PickupItemContext context)
+        {
+        }
+
         /// <summary>
         ///     Called when item is dropped
         /// </summary>
         /// <param name="context">Context of the drop event</param>
-        protected internal virtual void OnItemDropped(DropItemContext context){}
-        
+        protected internal virtual void OnItemDropped(DropItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item is transferred
+        /// </summary>
+        /// <param name="context">Context of the transfer event</param>
+        protected internal virtual void OnTransfer(TransferItemContext context)
+        {
+        }
+
+#region Utility
+
+        /// <summary>
+        ///     Spawns item as pickup object
+        /// </summary>
+        /// <param name="item">Item to spawn</param>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <param name="position">Position to drop item at</param>
+        /// <param name="rotation">Rotation of dropped item</param>
+        /// <param name="parent">Parent of dropped item</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        internal static void SpawnPickup<TPickupItemType>(
+            [NotNull] ItemBase item,
+            int amount,
+            in Vector3 position,
+            in Quaternion rotation,
+            [CanBeNull] Transform parent = null)
+            where TPickupItemType : PickupItem, new()
+            => item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
+
+
+        /// <summary>
+        ///     Spawns item as pickup object
+        /// </summary>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <param name="position">Position to drop item at</param>
+        /// <param name="rotation">Rotation of dropped item</param>
+        /// <param name="parent">Parent of dropped item</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        internal void SpawnPickup<TPickupItemType>(
+            int amount,
+            in Vector3 position,
+            in Quaternion rotation,
+            [CanBeNull] Transform parent = null)
+            where TPickupItemType : PickupItem, new()
+        {
+            // Create object
+            GameObject obj = Instantiate(DroppedItemPrefab);
+            Transform objTransform = obj.transform;
+            objTransform.position = position;
+            objTransform.rotation = rotation;
+            objTransform.SetParent(parent);
+
+            // Add pickup component and set data
+            if (!obj.TryGetComponent(out TPickupItemType pickupObj))
+                pickupObj = obj.AddComponent<TPickupItemType>();
+
+            pickupObj.SetData(this, amount);
+        }
+
+#endregion
     }
 }

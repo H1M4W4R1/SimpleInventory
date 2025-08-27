@@ -1,1 +1,1 @@
-﻿SimpleStats is required
+﻿OdinInspector is required

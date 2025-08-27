@@ -77,7 +77,7 @@ namespace Systems.SimpleInventory.Components.Equipment
                 else if(addItemsToInventory)
                 {
                     Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
-                    InventoryBase.SpawnItemObject<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                    ItemBase.SpawnPickup<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
                         1, objTransform.position, objTransform.rotation);
                 }
                 
@@ -116,7 +116,7 @@ namespace Systems.SimpleInventory.Components.Equipment
                 else if(addItemToInventory)
                 {
                     Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
-                    InventoryBase.SpawnItemObject<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                    ItemBase.SpawnPickup<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
                         1, objTransform.position, objTransform.rotation);
                 }
 

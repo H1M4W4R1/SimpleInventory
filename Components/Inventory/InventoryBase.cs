@@ -322,7 +322,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 InventoryDropPosition.rotation, InventoryDropPosition);
 
             // Create context
-            DropItemContext context = new DropItemContext(this, item, amount);
+            DropItemContext context = new(this, item, amount);
 
             // Call events
             OnItemDropped(context);
@@ -357,7 +357,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             ClearSlot(slotIndex);
 
             // Create context
-            DropItemContext context = new DropItemContext(this, itemReference, amount);
+            DropItemContext context = new(this, itemReference, amount);
 
             // Call events
             OnItemDropped(context);
@@ -365,39 +365,6 @@ namespace Systems.SimpleInventory.Components.Inventory
             return true;
         }
 
-        /// <summary>
-        ///     Spawns item as pickup object
-        /// </summary>
-        /// <param name="item">Item to drop</param>
-        /// <param name="amount">Amount of items to drop</param>
-        /// <param name="position">Position to drop item at</param>
-        /// <param name="rotation">Rotation of dropped item</param>
-        /// <param name="parent">Parent of dropped item</param>
-        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
-        internal static void SpawnItemObject<TPickupItemType>(
-            [NotNull] ItemBase item,
-            int amount,
-            in Vector3 position,
-            in Quaternion rotation,
-            [CanBeNull] Transform parent = null)
-            where TPickupItemType : PickupItem, new()
-        {
-            // Create object prefab
-            GameObject prefab = item.DroppedItemPrefab;
-
-            // Create object
-            GameObject obj = Instantiate(prefab);
-            Transform objTransform = obj.transform;
-            objTransform.position = position;
-            objTransform.rotation = rotation;
-            objTransform.SetParent(parent);
-
-            // Add pickup component and set data
-            if (!obj.TryGetComponent(out TPickupItemType pickupObj))
-                pickupObj = obj.AddComponent<TPickupItemType>();
-
-            pickupObj.SetData(item, amount);
-        }
 
         /// <summary>
         ///     Transfers specified amount of items from this inventory to another inventory
@@ -421,6 +388,11 @@ namespace Systems.SimpleInventory.Components.Inventory
             int addResult = targetInventory.TryAdd(itemBase, amount);
             Assert.IsTrue(addResult == amount, "Failed to add items to inventory, this should never happen");
 
+            // Create context
+            TransferItemContext context = new(this, targetInventory, itemBase, amount);
+            
+            // Call events
+            itemBase.OnTransfer(context);
             return true;
         }
 
@@ -460,30 +432,60 @@ namespace Systems.SimpleInventory.Components.Inventory
                 int spaceLeft = targetSlotData.SpaceLeft;
                 if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
 
+                // Create context - one-way transfer
+                TransferItemContext sourceTransferContext = new(this, targetInventory,
+                    sourceSlotData.Item,
+                    sourceSlotData.Amount);
+
                 // Transfer stack (partially too) and complete
                 int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
                 targetSlotData.Amount += amountToTransfer;
                 sourceSlotData.Amount -= amountToTransfer;
+
+                // Call events
+                sourceTransferContext.item.OnTransfer(sourceTransferContext);
                 return true;
             }
 
             // Handle target slot being occupied (different item ID)
-            if (ReferenceEquals(targetSlotData.Item, null))
+            if (!ReferenceEquals(targetSlotData.Item, null))
             {
                 // Handle swap
                 if (!swapIfOccupied) return false;
-
+        
+                // Create transfer context - two-way transfer
+                TransferItemContext sourceTransferContext = new(this, targetInventory,
+                    sourceSlotData.Item,
+                    sourceSlotData.Amount);
+                TransferItemContext targetTransferContext = new(targetInventory, this,
+                    targetSlotData.Item,
+                    targetSlotData.Amount);
+                
                 // Swap items
                 InventorySlot.Swap(sourceSlotData, targetSlotData);
+                
+                // Call events
+                sourceTransferContext.item.OnTransfer(sourceTransferContext);
+                targetTransferContext.item.OnTransfer(targetTransferContext);
                 return true;
             }
+            else
+            {
+                // Create context - one-way transfer
+                TransferItemContext sourceTransferContext = new(this, targetInventory,
+                    sourceSlotData.Item,
+                    sourceSlotData.Amount);
 
-            // Handle target slot being empty
-            targetSlotData.Item = sourceSlotData.Item;
-            targetSlotData.Amount = sourceSlotData.Amount;
-            sourceSlotData.Item = null;
-            sourceSlotData.Amount = 0;
-            return true;
+                // Handle target slot being empty
+                targetSlotData.Item = sourceSlotData.Item;
+                targetSlotData.Amount = sourceSlotData.Amount;
+                sourceSlotData.Item = null;
+                sourceSlotData.Amount = 0;
+
+                // Call events
+                sourceTransferContext.item.OnTransfer(sourceTransferContext);
+                return true;
+            }
         }
 
         /// <summary>
@@ -688,10 +690,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             int remaining = TryAdd(item, amountToAdd);
             if (remaining == 0) return;
-            
+
             DropItemAs<PickupItemWithDestroy>(item, remaining);
         }
-        
+
         /// <summary>
         ///     Tries to remove items from inventory
         /// </summary>
@@ -808,6 +810,28 @@ namespace Systems.SimpleInventory.Components.Inventory
         protected virtual void OnItemDropped(in DropItemContext context)
         {
         }
+
+#endregion
+
+#region Utility
+
+        /// <summary>
+        ///     Spawns item as pickup object
+        /// </summary>
+        /// <param name="item">Item to drop</param>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <param name="position">Position to drop item at</param>
+        /// <param name="rotation">Rotation of dropped item</param>
+        /// <param name="parent">Parent of dropped item</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        internal static void SpawnItemObject<TPickupItemType>(
+            [NotNull] ItemBase item,
+            int amount,
+            in Vector3 position,
+            in Quaternion rotation,
+            [CanBeNull] Transform parent = null)
+            where TPickupItemType : PickupItem, new() =>
+            item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
 
 #endregion
     }
