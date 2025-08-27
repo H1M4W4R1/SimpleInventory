@@ -130,7 +130,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (!context.item.CanEquip(context) || !CanEquip(context))
             {
                 OnItemCannotBeEquipped(context);
-                return EquipItemResult.CannotBeEquipped;
+                return EquipItemResult.NotAllowed;
             }
 
             // Find first empty slot we can equip item to
@@ -157,31 +157,31 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>Result of action</returns>
-        internal EquipItemResult Unequip(in UnequipItemContext context)
+        internal UnequipItemResult Unequip(in UnequipItemContext context)
         {
             // Check if already unequipped
             if (!context.item.IsEquipped(context))
             {
                 OnItemAlreadyUnequipped(context);
-                return EquipItemResult.NotEquipped;
+                return UnequipItemResult.NotEquipped;
             }
 
             // Check if item can be unequipped
             if (!context.item.CanUnequip(context) || !CanUnequip(context))
             {
                 OnItemCannotBeUnequipped(context);
-                return EquipItemResult.CannotBeUnequipped;
+                return UnequipItemResult.NotAllowed;
             }
 
             // Get item to unequip
             EquipmentSlot slot = GetFirstEquippedSlot(context.item);
-            if (slot == null) return EquipItemResult.NotEquipped;
+            if (slot == null) return UnequipItemResult.NotEquipped;
 
             // Add item to inventory if needed
             if (context.addToInventory)
             {
                 // Check if inventory can store item
-                if (!context.inventory.CanStore(context.item, 1)) return EquipItemResult.NoSpaceInInventory;
+                if (!context.inventory.CanStore(context.item, 1)) return UnequipItemResult.NoSpaceInInventory;
 
                 Assert.AreEqual(0, context.inventory.TryAdd(context.item, 1),
                     "Something went wrong while adding item to inventory, this should never happen");
@@ -195,7 +195,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             OnItemUnequipped(context);
             context.item.OnUnequip(context);
 
-            return EquipItemResult.UnequippedSuccessfully;
+            return UnequipItemResult.UnequippedSuccessfully;
         }
 
         /// <summary>

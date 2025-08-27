@@ -8,8 +8,8 @@ using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Native.Inventory;
-using Systems.SimpleInventory.Data.Native.Item;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -29,32 +29,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Cache variable for inventory data
         /// </summary>
-        private InventoryData _inventoryData;
+        // ReSharper disable once CollectionNeverUpdated.Local
+        private readonly List<InventorySlot> _inventoryData = new();
 
         // TODO: Convert into savable data and load from saved data
         // TODO: Drop
 
 #region Item Access
-
-        /// <summary>
-        ///     Low-level access to inventory data
-        /// </summary>
-        /// <returns>Reference to inventory data</returns>
-        public ref InventoryData GetNativeInventoryData() => ref _inventoryData;
-
-        /// <summary>
-        ///     Get item information at specified slot
-        /// </summary>
-        /// <param name="slotIndex">Slot index</param>
-        /// <returns>Found item data or invalid item data if slot is out of bounds or empty</returns>
-        public ItemData GetNativeItemData(int slotIndex)
-        {
-            InventorySlotData? slotData = null;
-            _inventoryData.GetSlot(slotIndex, ref slotData);
-
-            if (slotData == null) return ItemData.Invalid;
-            return slotData.Value.itemInfo;
-        }
 
         /// <summary>
         ///     Gets item at specified slot
@@ -63,8 +44,8 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <returns>Found item or null if slot is out of bounds or empty</returns>
         [CanBeNull] public ItemBase GetItemAt(int slotIndex)
         {
-            ItemData itemData = GetNativeItemData(slotIndex);
-            return itemData.itemID == ItemID.Invalid ? null : ItemsDatabase.GetItem(itemData.itemID);
+            if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return null;
+            return _inventoryData[slotIndex].Item;
         }
 
         /// <summary>
@@ -76,15 +57,12 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : ItemBase
         {
             // Loop through all items
-            for (int i = 0; i < InventorySize; i++)
+            for (int i = 0; i < _inventoryData.Count; i++)
             {
-                // Check if item is valid
-                ItemData itemData = GetNativeItemData(i);
-                if (itemData.itemID == ItemID.Invalid) continue;
+                ItemBase itemData = _inventoryData[i].Item;
 
                 // Check if item is of desired type and return reference
-                if (ItemsDatabase.GetItem(itemData.itemID) is TItemType item)
-                    return new InventoryItemReference<TItemType>(i, item);
+                if (itemData is TItemType item) return new InventoryItemReference<TItemType>(i, item);
             }
 
             return new InventoryItemReference<TItemType>(-1, null);
@@ -101,13 +79,10 @@ namespace Systems.SimpleInventory.Components.Inventory
             List<InventoryItemReference<TItemType>> items = new();
             for (int i = 0; i < InventorySize; i++)
             {
-                // Check if item is valid
-                ItemData itemData = GetNativeItemData(i);
-                if (itemData.itemID == ItemID.Invalid) continue;
+                ItemBase itemData = _inventoryData[i].Item;
 
                 // Check if item is of desired type and add to cache
-                if (ItemsDatabase.GetItem(itemData.itemID) is TItemType item)
-                    items.Add(new InventoryItemReference<TItemType>(i, item));
+                if (itemData is TItemType item) items.Add(new InventoryItemReference<TItemType>(i, item));
             }
 
             return items;
@@ -129,12 +104,11 @@ namespace Systems.SimpleInventory.Components.Inventory
             [NotNull] EquipmentBase toEquipment,
             bool removeFromInventory = true)
         {
-            // Get item at slot
-            ItemData itemData = GetNativeItemData(slotIndex);
-            if (itemData.itemID == ItemID.Invalid) return EquipItemResult.InvalidItem;
+            // Check if slot is valid
+            if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return EquipItemResult.InvalidSlot;
 
-            // Get item
-            ItemBase item = ItemsDatabase.GetItem(itemData.itemID);
+            // Get item at slot
+            ItemBase item = _inventoryData[slotIndex].Item;
 
             // Check if item is equippable
             if (item is not EquippableItemBase) return EquipItemResult.InvalidItem;
@@ -155,10 +129,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Do not use if item is already in inventory (will duplicate items).
         ///     In such case use <see cref="UnequipItem(int, EquipmentBase)"/>
         /// </remarks>
-        public EquipItemResult UnequipItem([NotNull] ItemBase item, [NotNull] EquipmentBase fromEquipment)
+        public UnequipItemResult UnequipItem([NotNull] ItemBase item, [NotNull] EquipmentBase fromEquipment)
         {
             // Check if item is equippable
-            if (item is not EquippableItemBase equippableItem) return EquipItemResult.InvalidItem;
+            if (item is not EquippableItemBase equippableItem) return UnequipItemResult.InvalidItem;
 
             // Create context
             UnequipItemContext context = new(this, fromEquipment, equippableItem, addToInventory: true);
@@ -175,17 +149,16 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     If you are removing item from inventory on <see cref="EquipItem"/>,
         ///     use <see cref="UnequipItem(ItemBase, EquipmentBase)"/>
         /// </remarks>
-        public EquipItemResult UnequipItem(int slotIndex, [NotNull] EquipmentBase fromEquipment)
+        public UnequipItemResult UnequipItem(int slotIndex, [NotNull] EquipmentBase fromEquipment)
         {
-            // Get item at slot
-            ItemData itemData = GetNativeItemData(slotIndex);
-            if (itemData.itemID == ItemID.Invalid) return EquipItemResult.InvalidItem;
+            // Check if slot is valid
+            if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UnequipItemResult.InvalidSlot;
 
             // Get item
-            ItemBase item = ItemsDatabase.GetItem(itemData.itemID);
+            ItemBase item = _inventoryData[slotIndex].Item;
 
             // Check if item is equippable
-            if (item is not EquippableItemBase equippableItem) return EquipItemResult.InvalidItem;
+            if (item is not EquippableItemBase equippableItem) return UnequipItemResult.InvalidItem;
 
             // Create context
             // We don't add to inventory as it's already here
@@ -251,12 +224,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <returns>Result of the use operation</returns>
         public UseItemResult UseItem(int slotIndex)
         {
-            // Get item at slot
-            ItemData itemData = GetNativeItemData(slotIndex);
-            if (itemData.itemID == ItemID.Invalid) return UseItemResult.InvalidItem;
+            // Check if slot is valid
+            if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UseItemResult.InvalidItem;
 
             // Get item
-            ItemBase item = ItemsDatabase.GetItem(itemData.itemID);
+            ItemBase item = _inventoryData[slotIndex].Item;
 
             // Check if item is equippable
             if (item is not UsableItemBase usableItem) return UseItemResult.InvalidItem;
@@ -358,41 +330,44 @@ namespace Systems.SimpleInventory.Components.Inventory
             bool swapIfOccupied = true)
         {
             // Ensure slots are valid
-            if (sourceSlot < 0 || sourceSlot >= _inventoryData.inventorySlots.Length) return false;
-            if (targetSlot < 0 || targetSlot >= targetInventory._inventoryData.inventorySlots.Length) return false;
+            if (sourceSlot < 0 || sourceSlot >= _inventoryData.Count) return false;
+            if (targetSlot < 0 || targetSlot >= targetInventory._inventoryData.Count) return false;
+
 
             // Get slots
-            ref InventorySlotData sourceSlotData = ref _inventoryData[sourceSlot];
-            ref InventorySlotData targetSlotData = ref targetInventory._inventoryData[targetSlot];
+            InventorySlot sourceSlotData = _inventoryData[sourceSlot];
+            InventorySlot targetSlotData = targetInventory._inventoryData[targetSlot];
 
             // Handle target slot having same item id
-            if (targetSlotData.itemInfo.itemID == sourceSlotData.itemInfo.itemID)
+            if (ReferenceEquals(sourceSlotData.Item, targetSlotData.Item))
             {
                 // Handle stack transfer
                 int spaceLeft = targetSlotData.SpaceLeft;
-                if (spaceLeft < sourceSlotData.currentStack && !allowPartialTransfer) return false;
+                if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
 
                 // Transfer stack (partially too) and complete
-                int amountToTransfer = math.min(sourceSlotData.currentStack, spaceLeft);
-                targetSlotData.currentStack += amountToTransfer;
-                sourceSlotData.currentStack -= amountToTransfer;
+                int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
+                targetSlotData.Amount += amountToTransfer;
+                sourceSlotData.Amount -= amountToTransfer;
                 return true;
             }
 
             // Handle target slot being occupied (different item ID)
-            if (targetSlotData.itemInfo.itemID != ItemID.Invalid)
+            if (ReferenceEquals(targetSlotData.Item, null))
             {
                 // Handle swap
                 if (!swapIfOccupied) return false;
 
                 // Swap items
-                (sourceSlotData, targetSlotData) = (targetSlotData, sourceSlotData);
+                InventorySlot.Swap(sourceSlotData, targetSlotData);
                 return true;
             }
 
             // Handle target slot being empty
-            targetSlotData = sourceSlotData;
-            sourceSlotData = InventorySlotData.Empty;
+            targetSlotData.Item = sourceSlotData.Item;
+            targetSlotData.Amount = sourceSlotData.Amount;
+            sourceSlotData.Item = null;
+            sourceSlotData.Amount = 0;
             return true;
         }
 
@@ -406,15 +381,15 @@ namespace Systems.SimpleInventory.Components.Inventory
         public bool SwapItems(int slotIndex1, int slotIndex2)
         {
             // Ensure slots are valid
-            if (slotIndex1 < 0 || slotIndex1 >= _inventoryData.inventorySlots.Length) return false;
-            if (slotIndex2 < 0 || slotIndex2 >= _inventoryData.inventorySlots.Length) return false;
+            if (slotIndex1 < 0 || slotIndex1 >= _inventoryData.Count) return false;
+            if (slotIndex2 < 0 || slotIndex2 >= _inventoryData.Count) return false;
 
             // Get slots
-            ref InventorySlotData slot1 = ref _inventoryData[slotIndex1];
-            ref InventorySlotData slot2 = ref _inventoryData[slotIndex2];
+            InventorySlot slot1 = _inventoryData[slotIndex1];
+            InventorySlot slot2 = _inventoryData[slotIndex2];
 
             // Swap slots
-            (slot1, slot2) = (slot2, slot1);
+            InventorySlot.Swap(slot1, slot2);
             return true;
         }
 
@@ -468,11 +443,10 @@ namespace Systems.SimpleInventory.Components.Inventory
             int freeSpace = 0;
             for (int i = 0; i < InventorySize; i++)
             {
-                ItemData itemData = GetNativeItemData(i);
-                if (itemData.itemID == ItemID.Invalid)
+                InventorySlot slot = _inventoryData[i];
+                if (ReferenceEquals(slot.Item, null))
                     freeSpace += itemBase.MaxStack;
-                else if (itemData.itemID == itemBase.Identifier)
-                    freeSpace += _inventoryData.inventorySlots[i].SpaceLeft;
+                else if (ReferenceEquals(slot.Item, itemBase)) freeSpace += slot.SpaceLeft;
             }
 
             return freeSpace;
@@ -532,32 +506,126 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is null) return 0;
             return Count(item);
         }
-        
+
         /// <summary>
         ///     Tries to add items to inventory, if inventory is full, tries to drop them
         /// </summary>
         /// <param name="item">Item to add</param>
         /// <param name="amount">Amount of item to add</param>
-        public void TryAddDrop([NotNull] ItemBase item,
+        public void TryAddDrop(
+            [NotNull] ItemBase item,
             int amount) => TryAdd(item, amount); // TODO: Implement drop logic
 
         /// <summary>
         ///     Tries to add items to inventory
         /// </summary>
         /// <param name="item">Item to add</param>
-        /// <param name="amount">Amount of item to add</param>
+        /// <param name="amountToAdd">Amount of item to add</param>
         /// <returns>Amount of items that could not be added</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public int TryAdd([NotNull] ItemBase item, int amount)
-            => _inventoryData.TryAdd(item.Identifier, amount, item.MaxStack);
+        public int TryAdd([NotNull] ItemBase item, int amountToAdd)
+        {
+            // Prevent execution if inventory is not created
+            if (_inventoryData is null) return amountToAdd;
+
+            // Prevent execution if count is invalid
+            if (amountToAdd <= 0) return amountToAdd;
+
+            // Iterate through inventory slots
+            // and attempt to add items if already occupied by same item id
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                InventorySlot slot = _inventoryData[i];
+
+                // Check if slot is occupied by same item
+                if (!ReferenceEquals(slot.Item, item)) continue;
+                
+                // Check if slot has enough space
+                int spaceLeft = slot.SpaceLeft;
+                
+                // Add items to slot
+                int nToAdd = math.min(amountToAdd, spaceLeft);
+                slot.Amount += nToAdd;
+                amountToAdd -= nToAdd;
+
+                // Check if all items were added
+                if (amountToAdd == 0) break;
+            }
+            
+            // Handle empty slots
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                InventorySlot slot = _inventoryData[i];
+                
+                // Check if slot is empty
+                if (!ReferenceEquals(slot.Item, null)) continue;
+                
+                // Add items to slot
+                int nToAdd = item.MaxStack;
+                slot.Amount += nToAdd;
+                amountToAdd -= nToAdd;
+                slot.Item = item;
+
+                // Check if all items were added
+                if (amountToAdd == 0) break;
+            }
+
+            // Return remaining amount
+            return amountToAdd;
+        }
 
         /// <summary>
         ///     Tries to remove items from inventory
         /// </summary>
         /// <param name="item">Item to remove</param>
-        /// <param name="amount">Amount of item to remove</param>
+        /// <param name="amountToTake">Amount of item to remove</param>
         /// <returns>True if items were removed, false otherwise</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool TryTake([NotNull] ItemBase item, int amount)
-            => _inventoryData.TryTake(item.Identifier, amount);
+        public bool TryTake([NotNull] ItemBase item, int amountToTake)
+        {
+            // Prevent execution if inventory is not created
+            if (_inventoryData is null) return false;
+            
+            // Prevent execution if count is invalid
+            if (amountToTake <= 0) return false;
+            
+            int currentItemCount = 0;
+            UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
+            
+            // Compute all slots that contain item
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                if (!ReferenceEquals(_inventoryData[i].Item, item)) continue;
+                currentItemCount += _inventoryData[i].Amount;
+                itemSlots.Add(i);
+                if (currentItemCount >= amountToTake) break;
+            }
+
+            // Return false if not enough items
+            if (currentItemCount < amountToTake)
+            {
+                itemSlots.Dispose();
+                return false;
+            }
+            
+            // Take enough items
+            for (int i = 0; i < itemSlots.Length; i++)
+            {
+                InventorySlot slot = _inventoryData[itemSlots[i]];
+                
+                // Perform take operation
+                int nToTake = math.min(amountToTake, slot.Amount);
+                slot.Amount -= nToTake;
+                amountToTake -= nToTake;
+
+                // If slot is empty, remove item reference
+                if (slot.Amount == 0) slot.Item = null;
+                
+                // Return true if enough items were taken
+                if (amountToTake == 0) break;
+            }
+
+            itemSlots.Dispose();
+            return true;
+        }
 
         /// <summary>
         ///     Checks if inventory has enough items
@@ -566,15 +634,25 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="amount">Amount of item to expect</param>
         /// <returns>True if inventory has enough items, false otherwise</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([NotNull] ItemBase item, int amount)
-            => _inventoryData.Has(item.Identifier, amount);
+            => Count(item) >= amount;
 
         /// <summary>
         ///     Counts items in inventory
         /// </summary>
         /// <param name="item">Item to count</param>
         /// <returns>Count of items</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public int Count([NotNull] ItemBase item)
-            => _inventoryData.Count(item.Identifier);
+        public int Count([NotNull] ItemBase item)
+        {
+            int totalItemCount = 0;
+            
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                if(ReferenceEquals(_inventoryData[i].Item, item))
+                    totalItemCount += _inventoryData[i].Amount;
+            }
+
+            return totalItemCount;
+        }
 
         /// <summary>
         ///     Clears specified slot
@@ -582,21 +660,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="slotIndex">Index of slot to clear</param>
         internal void ClearSlot(int slotIndex)
         {
-            _inventoryData[slotIndex] = InventorySlotData.Empty;
-        }
-
-#endregion
-
-#region Unity Lifecycle
-
-        protected void Awake()
-        {
-            _inventoryData = new InventoryData(InventorySize);
-        }
-
-        protected void OnDestroy()
-        {
-            _inventoryData.Dispose();
+            _inventoryData[slotIndex] = new InventorySlot();
         }
 
 #endregion

@@ -1,6 +1,6 @@
 ﻿namespace Systems.SimpleInventory.Data.Enums
 {
-    public enum EquipItemResult
+    public enum UnequipItemResult
     {
         /// <summary>
         ///     When slot index is invalid
@@ -13,23 +13,24 @@
         InvalidItem,
         
         /// <summary>
-        ///     When item cannot be equipped
+        ///     When item equip is impossible to execute
         /// </summary>
         NotAllowed,
         
         /// <summary>
-        ///     When item is already equipped
+        ///     When inventory lacks space for item
         /// </summary>
-        AlreadyEquipped,
+        NoSpaceInInventory,
         
         /// <summary>
-        ///     When there are no free slots to equip item to
+        ///     When item is not equipped
         /// </summary>
-        NoFreeSlots,
+        NotEquipped,
         
         /// <summary>
-        ///     When item is equipped successfully
+        ///     On success
         /// </summary>
-        EquippedSuccessfully,
+        UnequippedSuccessfully,
+   
     }
 }
