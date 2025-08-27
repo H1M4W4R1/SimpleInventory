@@ -1,6 +1,4 @@
 ﻿using Systems.SimpleInventory.Data.Context;
-using Systems.SimpleInventory.Data.Enums;
-using Systems.SimpleInventory.Data.Native.Context;
 
 namespace Systems.SimpleInventory.Data.Items
 {

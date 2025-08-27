@@ -1,9 +1,7 @@
-﻿using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Native.Context;
 using UnityEngine.Assertions;
 
 namespace Systems.SimpleInventory.Data.Context

@@ -4,7 +4,6 @@ using JetBrains.Annotations;
 using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Native.Item;
 using Unity.Burst;
-using UnityEngine.Assertions;
 
 namespace Systems.SimpleInventory.Data.Native.Inventory
 {

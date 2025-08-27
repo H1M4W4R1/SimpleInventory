@@ -1,5 +1,4 @@
 ﻿using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Components.Items;
 using Systems.SimpleInventory.Components.Items.Pickup;
 
 namespace Systems.SimpleInventory.Data.Context

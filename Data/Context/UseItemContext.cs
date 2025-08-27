@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Native.Context;
 using UnityEngine.Assertions;
 
 namespace Systems.SimpleInventory.Data.Context
