@@ -91,7 +91,8 @@ namespace Systems.SimpleInventory.Data.Items
 #region Utility
 
         /// <summary>
-        ///     Spawns item as pickup object
+        ///     Spawns item as pickup object, this triggers <see cref="OnItemDropped"/> event and should be used
+        ///     from external scripts 
         /// </summary>
         /// <param name="item">Item to spawn</param>
         /// <param name="amount">Amount of items to drop</param>
@@ -99,14 +100,20 @@ namespace Systems.SimpleInventory.Data.Items
         /// <param name="rotation">Rotation of dropped item</param>
         /// <param name="parent">Parent of dropped item</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
-        internal static void SpawnPickup<TPickupItemType>(
+        public static void DropItem<TPickupItemType>(
             [NotNull] ItemBase item,
             int amount,
             in Vector3 position,
             in Quaternion rotation,
             [CanBeNull] Transform parent = null)
             where TPickupItemType : PickupItem, new()
-            => item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
+        {
+            // Spawn pickup
+            item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
+            
+            // Call event
+            item.OnItemDropped(new DropItemContext(null, item, amount));
+        }
 
 
         /// <summary>

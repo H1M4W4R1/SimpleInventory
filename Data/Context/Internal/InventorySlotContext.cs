@@ -2,19 +2,27 @@
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Items;
 
-namespace Systems.SimpleInventory.Data.Context
+namespace Systems.SimpleInventory.Data.Context.Internal
 {
     /// <summary>
     ///     Represents information about inventory slot
     /// </summary>
     public readonly ref struct InventorySlotContext 
     {
-        [NotNull] public readonly InventoryBase inventory;
+        [CanBeNull] public readonly InventoryBase inventory;
         public readonly int slotIndex;
+
+        [CanBeNull] public ItemBase Item
+        {
+            get
+            {
+                // ReSharper disable once UseNullPropagation
+                if (inventory is null) return null;
+                return inventory.GetItemAt(slotIndex);
+            }
+        }
         
-        [CanBeNull] public ItemBase Item => inventory.GetItemAt(slotIndex);
-        
-        public InventorySlotContext([NotNull] InventoryBase inventory, int slotIndex)
+        public InventorySlotContext([CanBeNull] InventoryBase inventory, int slotIndex)
         {
             this.inventory = inventory;
             this.slotIndex = slotIndex;

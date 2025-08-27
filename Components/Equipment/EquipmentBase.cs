@@ -20,8 +20,9 @@ namespace Systems.SimpleInventory.Components.Equipment
     public abstract class EquipmentBase : MonoBehaviour
     {
         private bool _areEquipmentSlotsBuilt;
-        
-        [field: SerializeField] [Required]
+
+        [field: SerializeField]
+        [Required]
         [Tooltip("Position to drop item at when removing slot with drop enabled")]
         private Transform DropPositionFallback { get; set; }
 
@@ -72,15 +73,17 @@ namespace Systems.SimpleInventory.Components.Equipment
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
                 // Add item to inventory before removing slot
-                if (addItemsToInventory && inventory is not null) 
+                if (addItemsToInventory && inventory is not null)
                     inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
-                else if(addItemsToInventory)
+                else if (addItemsToInventory)
                 {
-                    Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
-                    ItemBase.SpawnPickup<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                        ? transform
+                        : DropPositionFallback;
+                    ItemBase.DropItem<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
                         1, objTransform.position, objTransform.rotation);
                 }
-                
+
                 // Remove slot
                 equipmentSlots.RemoveAt(i);
             }
@@ -111,12 +114,14 @@ namespace Systems.SimpleInventory.Components.Equipment
                 if (equipmentSlots[i] is not EquipmentSlot<TItemType>) continue;
 
                 // Add item to inventory before removing slot
-                if (addItemToInventory && inventory is not null) 
+                if (addItemToInventory && inventory is not null)
                     inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
-                else if(addItemToInventory)
+                else if (addItemToInventory)
                 {
-                    Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
-                    ItemBase.SpawnPickup<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                        ? transform
+                        : DropPositionFallback;
+                    ItemBase.DropItem<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
                         1, objTransform.position, objTransform.rotation);
                 }
 
@@ -177,7 +182,8 @@ namespace Systems.SimpleInventory.Components.Equipment
             slot.EquipItem(context.item);
 
             // Take item from inventory
-            if (context.removeFromInventory) context.slot.inventory.ClearSlot(context.slot.slotIndex);
+            if (context.removeFromInventory && context.slot.inventory is not null)
+                context.slot.inventory.ClearSlot(context.slot.slotIndex);
 
             // Call events
             context.item.OnEquip(context);
@@ -212,11 +218,17 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (slot == null) return UnequipItemResult.NotEquipped;
 
             // Add item to inventory if needed
-            if (context.addToInventory)
+            if (context.addToInventory && context.inventory is not null)
             {
-                // Check if inventory can store item
-                if (!context.inventory.CanStore(context.item, 1)) return UnequipItemResult.NoSpaceInInventory;
                 context.inventory.TryAddOrDrop(context.item, 1);
+            }
+            else if (context.addToInventory)
+            {
+                Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                    ? transform
+                    : DropPositionFallback;
+                ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
+                    1, objTransform.position, objTransform.rotation);
             }
 
             // Unequip item
