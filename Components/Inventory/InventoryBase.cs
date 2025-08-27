@@ -31,6 +31,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         private InventoryData _inventoryData;
 
+        // TODO: Convert into savable data and load from saved data
+        // TODO: Drop
+
+#region Item Access
+
         /// <summary>
         ///     Low-level access to inventory data
         /// </summary>
@@ -108,6 +113,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             return items;
         }
 
+#endregion
+
 #region EquippableItemBase
 
         /// <summary>
@@ -115,8 +122,12 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="slotIndex">Index of slot</param>
         /// <param name="toEquipment">Equipment to equip item to</param>
+        /// <param name="removeFromInventory">Whether to remove item from inventory</param>
         /// <returns>Result of the equip operation</returns>
-        public EquipItemResult EquipItem(int slotIndex, [NotNull] EquipmentBase toEquipment)
+        public EquipItemResult EquipItem(
+            int slotIndex,
+            [NotNull] EquipmentBase toEquipment,
+            bool removeFromInventory = true)
         {
             // Get item at slot
             ItemData itemData = GetNativeItemData(slotIndex);
@@ -129,18 +140,42 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is not EquippableItemBase) return EquipItemResult.InvalidItem;
 
             // Create context
-            EquipItemContext context = new(toEquipment, this, slotIndex);
+            EquipItemContext context = new(toEquipment, this, slotIndex, removeFromInventory: removeFromInventory);
 
             return toEquipment.Equip(context);
+        }
+
+        /// <summary>
+        ///     Unequips item from equipment
+        /// </summary>
+        /// <param name="item">Item to unequip</param>
+        /// <param name="fromEquipment">Equipment to unequip item from</param>
+        /// <returns>Result of the unequip operation</returns>
+        /// <remarks>
+        ///     Do not use if item is already in inventory (will duplicate items).
+        ///     In such case use <see cref="UnequipItem(int, EquipmentBase)"/>
+        /// </remarks>
+        public EquipItemResult UnequipItem([NotNull] ItemBase item, [NotNull] EquipmentBase fromEquipment)
+        {
+            // Check if item is equippable
+            if (item is not EquippableItemBase equippableItem) return EquipItemResult.InvalidItem;
+
+            // Create context
+            UnequipItemContext context = new(this, fromEquipment, equippableItem, addToInventory: true);
+            return fromEquipment.Unequip(context);
         }
 
         /// <summary>
         ///     Unequips item from inventory
         /// </summary>
         /// <param name="slotIndex">Index of slot</param>
-        /// <param name="toEquipment">Equipment to unequip item from</param>
+        /// <param name="fromEquipment">Equipment to unequip item from</param>
         /// <returns>Result of the unequip operation</returns>
-        public EquipItemResult UnequipItem(int slotIndex, [NotNull] EquipmentBase toEquipment)
+        /// <remarks>
+        ///     If you are removing item from inventory on <see cref="EquipItem"/>,
+        ///     use <see cref="UnequipItem(ItemBase, EquipmentBase)"/>
+        /// </remarks>
+        public EquipItemResult UnequipItem(int slotIndex, [NotNull] EquipmentBase fromEquipment)
         {
             // Get item at slot
             ItemData itemData = GetNativeItemData(slotIndex);
@@ -150,37 +185,43 @@ namespace Systems.SimpleInventory.Components.Inventory
             ItemBase item = ItemsDatabase.GetItem(itemData.itemID);
 
             // Check if item is equippable
-            if (item is not EquippableItemBase) return EquipItemResult.InvalidItem;
+            if (item is not EquippableItemBase equippableItem) return EquipItemResult.InvalidItem;
 
             // Create context
-            EquipItemContext context = new(toEquipment, this, slotIndex);
-
-            return toEquipment.Unequip(context);
+            // We don't add to inventory as it's already here
+            UnequipItemContext context = new(this, fromEquipment, equippableItem, addToInventory: false);
+            return fromEquipment.Unequip(context);
         }
 
         /// <summary>
         ///     Equips any item of specified type
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
+        /// <param name="removeFromInventory">Whether to remove item from inventory</param>
         /// <typeparam name="TItemType">Item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
-        public EquipItemResult EquipAnyItem<TItemType>([NotNull] EquipmentBase toEquipment)
+        public EquipItemResult EquipAnyItem<TItemType>(
+            [NotNull] EquipmentBase toEquipment,
+            bool removeFromInventory = true)
             where TItemType : EquippableItemBase
         {
             // Get first item
             InventoryItemReference<TItemType> itemReference = GetFirstItemOfType<TItemType>();
             if (itemReference.item is null) return EquipItemResult.InvalidItem;
 
-            return EquipItem(itemReference.slotIndex, toEquipment);
+            return EquipItem(itemReference.slotIndex, toEquipment, removeFromInventory);
         }
 
         /// <summary>
         ///     Equips best item of specified type
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
+        /// <param name="removeFromInventory">Whether to remove item from inventory</param>
         /// <typeparam name="TItemType">Type of item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
-        public EquipItemResult EquipBestItem<TItemType>([NotNull] EquipmentBase toEquipment)
+        public EquipItemResult EquipBestItem<TItemType>(
+            [NotNull] EquipmentBase toEquipment,
+            bool removeFromInventory = true)
             where TItemType : EquippableItemBase, IComparable<TItemType>
         {
             // Get all items
@@ -196,7 +237,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             }
 
             // Use best item
-            return EquipItem(bestItem.slotIndex, toEquipment);
+            return EquipItem(bestItem.slotIndex, toEquipment, removeFromInventory);
         }
 
 #endregion
@@ -379,8 +420,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
 #endregion
 
-        // TODO: Convert into savable data and load from saved data
-        // TODO: Drop
+#region Core item handling (Add/Remove/Check)
 
         /// <summary>
         ///     Checks if inventory can store specified amount of items
@@ -492,6 +532,14 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is null) return 0;
             return Count(item);
         }
+        
+        /// <summary>
+        ///     Tries to add items to inventory, if inventory is full, tries to drop them
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="amount">Amount of item to add</param>
+        public void TryAddDrop([NotNull] ItemBase item,
+            int amount) => TryAdd(item, amount); // TODO: Implement drop logic
 
         /// <summary>
         ///     Tries to add items to inventory
@@ -528,6 +576,19 @@ namespace Systems.SimpleInventory.Components.Inventory
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public int Count([NotNull] ItemBase item)
             => _inventoryData.Count(item.Identifier);
 
+        /// <summary>
+        ///     Clears specified slot
+        /// </summary>
+        /// <param name="slotIndex">Index of slot to clear</param>
+        internal void ClearSlot(int slotIndex)
+        {
+            _inventoryData[slotIndex] = InventorySlotData.Empty;
+        }
+
+#endregion
+
+#region Unity Lifecycle
+
         protected void Awake()
         {
             _inventoryData = new InventoryData(InventorySize);
@@ -537,6 +598,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             _inventoryData.Dispose();
         }
+
+#endregion
+
+#region Events
 
         /// <summary>
         ///     Called when item is picked up
@@ -553,6 +618,8 @@ namespace Systems.SimpleInventory.Components.Inventory
         protected internal virtual void OnItemPickupFailed(in PickupItemContext context)
         {
         }
+
+#endregion
 
         // TODO: ItemDropped event
     }

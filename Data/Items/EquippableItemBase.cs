@@ -14,6 +14,14 @@ namespace Systems.SimpleInventory.Data.Items
         /// <returns>True if the item is equipped, false otherwise</returns>
         public bool IsEquipped(in EquipItemContext context) =>
             context.equipment.IsEquipped(context);
+        
+        /// <summary>
+        ///     Checks if the item is equipped.
+        /// </summary>
+        /// <param name="context">Context to check in</param>
+        /// <returns>True if the item is equipped, false otherwise</returns>
+        public bool IsEquipped(in UnequipItemContext context) =>
+            context.equipment.IsEquipped(context);
 
         /// <summary>
         ///     Checks if the item can be equipped.
@@ -27,7 +35,7 @@ namespace Systems.SimpleInventory.Data.Items
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be unequipped, false otherwise</returns>
-        public virtual bool CanUnequip(in EquipItemContext context) => true;
+        public virtual bool CanUnequip(in UnequipItemContext context) => true;
 
         /// <summary>
         ///     Called when the item is equipped.
@@ -39,6 +47,6 @@ namespace Systems.SimpleInventory.Data.Items
         ///     Called when the item is unequipped.
         /// </summary>
         /// <param name="context">Context of action</param>
-        public abstract void OnUnequip(in EquipItemContext context);
+        public abstract void OnUnequip(in UnequipItemContext context);
     }
 }

@@ -35,7 +35,7 @@ namespace Systems.SimpleInventory.Data
         /// <summary>
         ///     Ensures that all items are loaded
         /// </summary>
-        private static void EnsureLoaded()
+        internal static void EnsureLoaded()
         {
             if (!_isLoaded) Load();
         }

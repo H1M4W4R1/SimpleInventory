@@ -7,9 +7,12 @@
         CannotBeEquipped,
         AlreadyEquipped,
         EquippedSuccessfully,
+        NoFreeSlots,
         
         CannotBeUnequipped,
-        AlreadyUnequipped,
-        UnequippedSuccessfully
+        UnequippedSuccessfully,
+        NoSpaceInInventory,
+        NotEquipped
+       
     }
 }
