@@ -23,6 +23,11 @@ namespace Systems.SimpleInventory.Data.Items
         [field: SerializeField] public int MaxStack { get; private set; } = 1;
 
         /// <summary>
+        ///     Prefab of the item when dropped
+        /// </summary>
+        [field: SerializeField] public GameObject DroppedItemPrefab { get; private set; }
+        
+        /// <summary>
         ///     Checks if this item is equippable
         /// </summary>
         public bool IsEquippable => this is EquippableItemBase;
@@ -62,6 +67,11 @@ namespace Systems.SimpleInventory.Data.Items
         /// <param name="context">Context of the pickup event</param>
         protected internal virtual void OnPickupFailed(PickupItemContext context){}
         
-        // TODO: Events - drop, transfer
+        /// <summary>
+        ///     Called when item is dropped
+        /// </summary>
+        /// <param name="context">Context of the drop event</param>
+        protected internal virtual void OnItemDropped(DropItemContext context){}
+        
     }
 }

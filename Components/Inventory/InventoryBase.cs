@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Equipment;
+using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
@@ -22,6 +24,11 @@ namespace Systems.SimpleInventory.Components.Inventory
     public abstract class InventoryBase : MonoBehaviour
     {
         /// <summary>
+        ///     Drop position for inventory
+        /// </summary>
+        [field: SerializeField] private Transform InventoryDropPosition { get; set; }
+
+        /// <summary>
         ///     Size of inventory
         /// </summary>
         [field: SerializeField] public int InventorySize { get; private set; } = 2048;
@@ -32,8 +39,19 @@ namespace Systems.SimpleInventory.Components.Inventory
         // ReSharper disable once CollectionNeverUpdated.Local
         private readonly List<InventorySlot> _inventoryData = new();
 
-        // TODO: Convert into savable data and load from saved data
-        // TODO: Drop
+        /// <summary>
+        ///     Saves inventory data to binary format
+        /// </summary>
+        /// <returns>Inventory data in binary format</returns>
+        public byte[] Save() => SerializationUtility.SerializeValue(_inventoryData, DataFormat.Binary);
+
+        /// <summary>
+        ///     Loads inventory data from binary format
+        /// </summary>
+        /// <param name="data">Inventory data in binary format</param>
+        public void Load(byte[] data)
+            => _inventoryData.AddRange(
+                SerializationUtility.DeserializeValue<List<InventorySlot>>(data, DataFormat.Binary));
 
 #region Item Access
 
@@ -285,6 +303,103 @@ namespace Systems.SimpleInventory.Components.Inventory
 #region Item transfer
 
         /// <summary>
+        ///     Drops item as pickup object
+        /// </summary>
+        /// <param name="item">Item to drop</param>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        /// <returns>True if item was dropped, false otherwise</returns>
+        public bool DropItemAs<TPickupItemType>(
+            [NotNull] ItemBase item,
+            int amount)
+            where TPickupItemType : PickupItem, new()
+        {
+            // Try to take required items
+            if (!TryTake(item, amount)) return false;
+
+            // Spawn object
+            SpawnItemObject<TPickupItemType>(item, amount, InventoryDropPosition.position,
+                InventoryDropPosition.rotation, InventoryDropPosition);
+
+            // Create context
+            DropItemContext context = new DropItemContext(this, item, amount);
+
+            // Call events
+            OnItemDropped(context);
+            item.OnItemDropped(context);
+            return true;
+        }
+
+        /// <summary>
+        ///     Drops item as pickup object
+        /// </summary>
+        /// <param name="slotIndex">Index of slot</param>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        /// <returns>True if item was dropped, false otherwise</returns>
+        public bool DropItemAs<TPickupItemType>(
+            int slotIndex,
+            int amount)
+            where TPickupItemType : PickupItem, new()
+        {
+            // Check if slot is valid
+            if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return false;
+
+            // Get item
+            ItemBase itemReference = GetItemAt(slotIndex);
+            if (itemReference is null) return false;
+
+            // Spawn object
+            SpawnItemObject<TPickupItemType>(itemReference, amount, InventoryDropPosition.position,
+                InventoryDropPosition.rotation, InventoryDropPosition);
+
+            // Clear slot data
+            ClearSlot(slotIndex);
+
+            // Create context
+            DropItemContext context = new DropItemContext(this, itemReference, amount);
+
+            // Call events
+            OnItemDropped(context);
+            itemReference.OnItemDropped(context);
+            return true;
+        }
+
+        /// <summary>
+        ///     Spawns item as pickup object
+        /// </summary>
+        /// <param name="item">Item to drop</param>
+        /// <param name="amount">Amount of items to drop</param>
+        /// <param name="position">Position to drop item at</param>
+        /// <param name="rotation">Rotation of dropped item</param>
+        /// <param name="parent">Parent of dropped item</param>
+        /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        internal static void SpawnItemObject<TPickupItemType>(
+            [NotNull] ItemBase item,
+            int amount,
+            in Vector3 position,
+            in Quaternion rotation,
+            [CanBeNull] Transform parent = null)
+            where TPickupItemType : PickupItem, new()
+        {
+            // Create object prefab
+            GameObject prefab = item.DroppedItemPrefab;
+
+            // Create object
+            GameObject obj = Instantiate(prefab);
+            Transform objTransform = obj.transform;
+            objTransform.position = position;
+            objTransform.rotation = rotation;
+            objTransform.SetParent(parent);
+
+            // Add pickup component and set data
+            if (!obj.TryGetComponent(out TPickupItemType pickupObj))
+                pickupObj = obj.AddComponent<TPickupItemType>();
+
+            pickupObj.SetData(item, amount);
+        }
+
+        /// <summary>
         ///     Transfers specified amount of items from this inventory to another inventory
         /// </summary>
         /// <param name="itemBase">Item to transfer</param>
@@ -508,15 +623,6 @@ namespace Systems.SimpleInventory.Components.Inventory
         }
 
         /// <summary>
-        ///     Tries to add items to inventory, if inventory is full, tries to drop them
-        /// </summary>
-        /// <param name="item">Item to add</param>
-        /// <param name="amount">Amount of item to add</param>
-        public void TryAddDrop(
-            [NotNull] ItemBase item,
-            int amount) => TryAdd(item, amount); // TODO: Implement drop logic
-
-        /// <summary>
         ///     Tries to add items to inventory
         /// </summary>
         /// <param name="item">Item to add</param>
@@ -538,10 +644,10 @@ namespace Systems.SimpleInventory.Components.Inventory
 
                 // Check if slot is occupied by same item
                 if (!ReferenceEquals(slot.Item, item)) continue;
-                
+
                 // Check if slot has enough space
                 int spaceLeft = slot.SpaceLeft;
-                
+
                 // Add items to slot
                 int nToAdd = math.min(amountToAdd, spaceLeft);
                 slot.Amount += nToAdd;
@@ -550,15 +656,15 @@ namespace Systems.SimpleInventory.Components.Inventory
                 // Check if all items were added
                 if (amountToAdd == 0) break;
             }
-            
+
             // Handle empty slots
             for (int i = 0; i < _inventoryData.Count; i++)
             {
                 InventorySlot slot = _inventoryData[i];
-                
+
                 // Check if slot is empty
                 if (!ReferenceEquals(slot.Item, null)) continue;
-                
+
                 // Add items to slot
                 int nToAdd = item.MaxStack;
                 slot.Amount += nToAdd;
@@ -574,6 +680,19 @@ namespace Systems.SimpleInventory.Components.Inventory
         }
 
         /// <summary>
+        ///     Tries to add items to inventory, if not enough space drops items
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="amountToAdd">Amount of items to add</param>
+        public void TryAddOrDrop([NotNull] ItemBase item, int amountToAdd)
+        {
+            int remaining = TryAdd(item, amountToAdd);
+            if (remaining == 0) return;
+            
+            DropItemAs<PickupItemWithDestroy>(item, remaining);
+        }
+        
+        /// <summary>
         ///     Tries to remove items from inventory
         /// </summary>
         /// <param name="item">Item to remove</param>
@@ -583,13 +702,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             // Prevent execution if inventory is not created
             if (_inventoryData is null) return false;
-            
+
             // Prevent execution if count is invalid
             if (amountToTake <= 0) return false;
-            
+
             int currentItemCount = 0;
             UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
-            
+
             // Compute all slots that contain item
             for (int i = 0; i < _inventoryData.Count; i++)
             {
@@ -605,12 +724,12 @@ namespace Systems.SimpleInventory.Components.Inventory
                 itemSlots.Dispose();
                 return false;
             }
-            
+
             // Take enough items
             for (int i = 0; i < itemSlots.Length; i++)
             {
                 InventorySlot slot = _inventoryData[itemSlots[i]];
-                
+
                 // Perform take operation
                 int nToTake = math.min(amountToTake, slot.Amount);
                 slot.Amount -= nToTake;
@@ -618,7 +737,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
                 // If slot is empty, remove item reference
                 if (slot.Amount == 0) slot.Item = null;
-                
+
                 // Return true if enough items were taken
                 if (amountToTake == 0) break;
             }
@@ -644,11 +763,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         public int Count([NotNull] ItemBase item)
         {
             int totalItemCount = 0;
-            
+
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                if(ReferenceEquals(_inventoryData[i].Item, item))
-                    totalItemCount += _inventoryData[i].Amount;
+                if (ReferenceEquals(_inventoryData[i].Item, item)) totalItemCount += _inventoryData[i].Amount;
             }
 
             return totalItemCount;
@@ -683,8 +801,14 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
         }
 
-#endregion
+        /// <summary>
+        ///     Called when item is dropped
+        /// </summary>
+        /// <param name="context">Context of the drop event</param>
+        protected virtual void OnItemDropped(in DropItemContext context)
+        {
+        }
 
-        // TODO: ItemDropped event
+#endregion
     }
 }

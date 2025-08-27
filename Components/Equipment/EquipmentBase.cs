@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Inventory;
+using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Equipment;
@@ -17,11 +20,30 @@ namespace Systems.SimpleInventory.Components.Equipment
     public abstract class EquipmentBase : MonoBehaviour
     {
         private bool _areEquipmentSlotsBuilt;
+        
+        [field: SerializeField] [Required]
+        [Tooltip("Position to drop item at when removing slot with drop enabled")]
+        private Transform DropPositionFallback { get; set; }
 
         // ReSharper disable once CollectionNeverUpdated.Global
         internal readonly List<EquipmentSlot> equipmentSlots = new();
 
-        // TODO: Save/Load from data.
+        /// <summary>
+        ///     Converts equipment slots to binary data
+        /// </summary>
+        /// <returns>Data in binary format</returns>
+        public byte[] Save() => SerializationUtility.SerializeValue(equipmentSlots, DataFormat.Binary);
+
+        /// <summary>
+        ///     Converts binary data to equipment slots
+        /// </summary>
+        /// <param name="data">Data in binary format</param>
+        public void Load(byte[] data)
+        {
+            equipmentSlots.Clear();
+            equipmentSlots.AddRange(
+                SerializationUtility.DeserializeValue<List<EquipmentSlot>>(data, DataFormat.Binary));
+        }
 
         /// <summary>
         ///     Must be called to build equipment slots
@@ -50,9 +72,15 @@ namespace Systems.SimpleInventory.Components.Equipment
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
                 // Add item to inventory before removing slot
-                if (addItemsToInventory && inventory is not null) // TODO: Drop if inventory null?
-                    inventory.TryAddDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
-
+                if (addItemsToInventory && inventory is not null) 
+                    inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
+                else if(addItemsToInventory)
+                {
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
+                    InventoryBase.SpawnItemObject<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                        1, objTransform.position, objTransform.rotation);
+                }
+                
                 // Remove slot
                 equipmentSlots.RemoveAt(i);
             }
@@ -83,8 +111,14 @@ namespace Systems.SimpleInventory.Components.Equipment
                 if (equipmentSlots[i] is not EquipmentSlot<TItemType>) continue;
 
                 // Add item to inventory before removing slot
-                if (addItemToInventory && inventory is not null) // TODO: Drop if inventory null?
-                    inventory.TryAddDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
+                if (addItemToInventory && inventory is not null) 
+                    inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
+                else if(addItemToInventory)
+                {
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null) ? transform : DropPositionFallback;
+                    InventoryBase.SpawnItemObject<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
+                        1, objTransform.position, objTransform.rotation);
+                }
 
                 equipmentSlots.RemoveAt(i);
                 return;
@@ -182,9 +216,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             {
                 // Check if inventory can store item
                 if (!context.inventory.CanStore(context.item, 1)) return UnequipItemResult.NoSpaceInInventory;
-
-                Assert.AreEqual(0, context.inventory.TryAdd(context.item, 1),
-                    "Something went wrong while adding item to inventory, this should never happen");
+                context.inventory.TryAddOrDrop(context.item, 1);
             }
 
             // Unequip item

@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Sirenix.OdinInspector;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Items;
@@ -14,7 +15,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// <summary>
         ///     Item that can be picked up
         /// </summary>
-        [field: SerializeReference] public ItemBase Item { get; private set; }
+        [field: SerializeReference] [Required] public ItemBase Item { get; private set; }
         
         /// <summary>
         ///     Amount of items that can can be picked up from this item

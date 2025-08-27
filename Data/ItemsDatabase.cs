@@ -50,8 +50,7 @@ namespace Systems.SimpleInventory.Data
             localList.Sort();
             _items = localList;
             
-            // TODO: Uncomment this when system is fully operational
-            // _isLoaded = true;
+            _isLoaded = true;
         }
 
 
