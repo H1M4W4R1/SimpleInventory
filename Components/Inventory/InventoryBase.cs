@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Items.Pickup;
@@ -26,7 +27,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Drop position for inventory
         /// </summary>
-        [field: SerializeField] private Transform InventoryDropPosition { get; set; }
+        [field: SerializeField] [Required] private Transform InventoryDropPosition { get; set; }
 
         /// <summary>
         ///     Size of inventory
@@ -52,7 +53,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public void Load(byte[] data)
             => _inventoryData.AddRange(
                 SerializationUtility.DeserializeValue<List<InventorySlot>>(data, DataFormat.Binary));
-
+        
 #region Item Access
 
         /// <summary>
@@ -95,7 +96,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : ItemBase
         {
             List<InventoryItemReference<TItemType>> items = new();
-            for (int i = 0; i < InventorySize; i++)
+            for (int i = 0; i < _inventoryData.Count; i++)
             {
                 ItemBase itemData = _inventoryData[i].Item;
 
@@ -290,8 +291,10 @@ namespace Systems.SimpleInventory.Components.Inventory
             InventoryItemReference<TItemType> bestItem = items[0];
             for (int i = 1; i < items.Count; i++)
             {
-                // Compare items
-                if (items[i].item.CompareTo(bestItem.item) > 0) bestItem = items[i];
+                // Compare items, conversion to interface prevents fuck-ups from compiler taking ItemBase.CompareTo
+                // instead of TItemType.CompareTo
+                IComparable<TItemType> itemCompare = items[i].item;
+                if (itemCompare.CompareTo(bestItem.item) > 0) bestItem = items[i];
             }
 
             // Use best item
@@ -558,7 +561,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             // Count free space for item
             int freeSpace = 0;
-            for (int i = 0; i < InventorySize; i++)
+            for (int i = 0; i < _inventoryData.Count; i++)
             {
                 InventorySlot slot = _inventoryData[i];
                 if (ReferenceEquals(slot.Item, null))
@@ -786,6 +789,13 @@ namespace Systems.SimpleInventory.Components.Inventory
 #endregion
 
 #region Events
+
+        protected void Awake()
+        {
+            // Initialize inventory data
+            for(int i = 0; i < InventorySize; i++)
+                _inventoryData.Add(new InventorySlot());
+        }
 
         /// <summary>
         ///     Called when item is picked up

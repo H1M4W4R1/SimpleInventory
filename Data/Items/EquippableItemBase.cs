@@ -41,12 +41,12 @@ namespace Systems.SimpleInventory.Data.Items
         ///     Called when the item is equipped.
         /// </summary>
         /// <param name="context">Context of action</param>
-        public abstract void OnEquip(in EquipItemContext context);
+        public virtual void OnEquip(in EquipItemContext context){}
 
         /// <summary>
         ///     Called when the item is unequipped.
         /// </summary>
         /// <param name="context">Context of action</param>
-        public abstract void OnUnequip(in UnequipItemContext context);
+        public virtual void OnUnequip(in UnequipItemContext context){}
     }
 }
