@@ -553,7 +553,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public bool CanStore<TItemType>(int amount)
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return false;
             return CanStore(item, amount);
         }
@@ -574,7 +574,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetFreeSpaceFor<TItemType>()
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return 0;
             return GetFreeSpaceFor(item);
         }
@@ -608,7 +608,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public int TryAdd<TItemType>(int amount)
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return amount;
             return TryAdd(item, amount);
         }
@@ -622,7 +622,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public bool TryTake<TItemType>(int amount)
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return false;
             return TryTake(item, amount);
         }
@@ -636,7 +636,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public bool Has<TItemType>(int amount)
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return false;
             return Has(item, amount);
         }
@@ -649,7 +649,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public int Count<TItemType>()
             where TItemType : ItemBase, new()
         {
-            TItemType item = ItemsDatabase.GetItem<TItemType>();
+            TItemType item = ItemsDatabase.Get<TItemType>();
             if (item is null) return 0;
             return Count(item);
         }
