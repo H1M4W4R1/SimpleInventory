@@ -1,5 +1,6 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Systems.SimpleCore.Automation.Attributes;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Native.Item;
@@ -11,8 +12,7 @@ namespace Systems.SimpleInventory.Data.Items
     ///     Basic class for inventory items - should be used as base for all inventory items
     ///     with custom logic.
     /// </summary>
-    [Serializable] 
-    
+    [Serializable] [AutoCreatedObject("Items", ItemsDatabase.LABEL)]
     public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<ItemID>
     {
         /// <summary>

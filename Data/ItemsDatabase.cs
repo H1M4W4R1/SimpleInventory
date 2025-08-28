@@ -1,11 +1,7 @@
-﻿using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Systems.SimpleCore.Storage;
 using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Native.Item;
-using UnityEngine.AddressableAssets;
-using UnityEngine.Assertions;
-using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace Systems.SimpleInventory.Data
 {
@@ -14,7 +10,8 @@ namespace Systems.SimpleInventory.Data
     /// </summary>
     public class ItemsDatabase : AddressableDatabase<ItemsDatabase, ItemBase>
     {
-        [NotNull] protected override string AddressableLabel => "SimpleInventory.Items";
+        public const string LABEL = "SimpleInventory.Items";
+        [NotNull] protected override string AddressableLabel => LABEL;
         
         /// <summary>
         ///     Gets item by identifier

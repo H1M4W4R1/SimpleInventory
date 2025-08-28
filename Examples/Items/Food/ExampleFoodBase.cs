@@ -7,7 +7,7 @@ namespace Systems.SimpleInventory.Examples.Items.Food
 {
     public abstract class ExampleFoodBase : UsableItemBase, IComparable<ExampleFoodBase>
     {
-        [field: SerializeField] public int HealthRestore { get; private set; }
+        [field: SerializeField] public virtual int HealthRestore { get; private set; }
 
         public sealed override void OnUse(in UseItemContext context)
         {
