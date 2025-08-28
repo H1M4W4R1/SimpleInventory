@@ -1,5 +1,6 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Sirenix.Utilities;
 using Systems.SimpleInventory.Data.Items;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -22,6 +23,12 @@ namespace Systems.SimpleInventory.Data.Equipment
         /// </summary>
         public override bool IsItemValid(ItemBase item) => item is TItemType;
 
+        /// <summary>
+        ///     Checks if the item is valid for this slot
+        /// </summary>
+        public override bool IsItemValid<TCheckType>() =>
+            typeof(TCheckType).ImplementsOrInherits(typeof(TItemType));
+        
         /// <summary>
         ///     Equips the item in this slot
         /// </summary>
@@ -68,6 +75,14 @@ namespace Systems.SimpleInventory.Data.Equipment
         /// <param name="item">Item to check</param>
         /// <returns>True if item is valid for this slot, false otherwise</returns>
         public abstract bool IsItemValid([CanBeNull] ItemBase item);
+
+        /// <summary>
+        ///     Checks if the item is valid for this slot
+        /// </summary>
+        /// <typeparam name="TItemType">Type of item to check</typeparam>
+        /// <returns>True if item is valid for this slot, false otherwise</returns>
+        public abstract bool IsItemValid<TItemType>()
+            where TItemType : EquippableItemBase;
 
         /// <summary>
         ///     Item currently equipped in this slot

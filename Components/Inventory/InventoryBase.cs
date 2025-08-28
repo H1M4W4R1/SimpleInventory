@@ -53,7 +53,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         public void Load(byte[] data)
             => _inventoryData.AddRange(
                 SerializationUtility.DeserializeValue<List<InventorySlot>>(data, DataFormat.Binary));
-        
+
 #region Item Access
 
         /// <summary>
@@ -117,11 +117,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="slotIndex">Index of slot</param>
         /// <param name="toEquipment">Equipment to equip item to</param>
         /// <param name="removeFromInventory">Whether to remove item from inventory</param>
+        /// <param name="allowReplace">Whether to allow replacing existing item</param>
         /// <returns>Result of the equip operation</returns>
         public EquipItemResult EquipItem(
             int slotIndex,
             [NotNull] EquipmentBase toEquipment,
-            bool removeFromInventory = true)
+            bool removeFromInventory = true,
+            bool allowReplace = true)
         {
             // Check if slot is valid
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return EquipItemResult.InvalidSlot;
@@ -133,7 +135,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is not EquippableItemBase) return EquipItemResult.InvalidItem;
 
             // Create context
-            EquipItemContext context = new(toEquipment, this, slotIndex, removeFromInventory: removeFromInventory);
+            EquipItemContext context = new(toEquipment, this, slotIndex, removeFromInventory: removeFromInventory,
+                allowReplace: allowReplace);
 
             return toEquipment.Equip(context);
         }
@@ -190,18 +193,43 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
         /// <param name="removeFromInventory">Whether to remove item from inventory</param>
+        /// <param name="allowReplace">Whether to allow replacing existing item</param>
         /// <typeparam name="TItemType">Item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
         public EquipItemResult EquipAnyItem<TItemType>(
             [NotNull] EquipmentBase toEquipment,
-            bool removeFromInventory = true)
+            bool removeFromInventory = true,
+            bool allowReplace = true)
             where TItemType : EquippableItemBase
         {
             // Get first item
             InventoryItemReference<TItemType> itemReference = GetFirstItemOfType<TItemType>();
             if (itemReference.item is null) return EquipItemResult.InvalidItem;
 
-            return EquipItem(itemReference.slotIndex, toEquipment, removeFromInventory);
+            return EquipItem(itemReference.slotIndex, toEquipment, removeFromInventory, allowReplace);
+        }
+
+        /// <summary>
+        ///     Equips any item of specified type
+        /// </summary>
+        /// <param name="toEquipment">Equipment to equip item to</param>
+        /// <param name="removeFromInventory">Whether to remove item from inventory</param>
+        /// <typeparam name="TItemType">Item to equip</typeparam>
+        /// <returns>Result of the equip operation</returns>
+        public UnequipItemResult UnequipAnyItem<TItemType>(
+            [NotNull] EquipmentBase toEquipment,
+            bool removeFromInventory = true)
+            where TItemType : EquippableItemBase
+        {
+            // Get all items in inventory of specified type
+            TItemType item  = toEquipment.GetFirstEquippedItemFor<TItemType>();
+            if (ReferenceEquals(item, null)) return UnequipItemResult.InvalidItem;
+            
+            // Unequip item to inventory
+            UnequipItem(item, toEquipment);
+
+            // Item is not equipped
+            return UnequipItemResult.NotEquipped;
         }
 
         /// <summary>
@@ -393,7 +421,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Create context
             TransferItemContext context = new(this, targetInventory, itemBase, amount);
-            
+
             // Call events
             itemBase.OnTransfer(context);
             return true;
@@ -455,7 +483,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             {
                 // Handle swap
                 if (!swapIfOccupied) return false;
-        
+
                 // Create transfer context - two-way transfer
                 TransferItemContext sourceTransferContext = new(this, targetInventory,
                     sourceSlotData.Item,
@@ -463,10 +491,10 @@ namespace Systems.SimpleInventory.Components.Inventory
                 TransferItemContext targetTransferContext = new(targetInventory, this,
                     targetSlotData.Item,
                     targetSlotData.Amount);
-                
+
                 // Swap items
                 InventorySlot.Swap(sourceSlotData, targetSlotData);
-                
+
                 // Call events
                 sourceTransferContext.item.OnTransfer(sourceTransferContext);
                 targetTransferContext.item.OnTransfer(targetTransferContext);
@@ -793,8 +821,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         protected void Awake()
         {
             // Initialize inventory data
-            for(int i = 0; i < InventorySize; i++)
-                _inventoryData.Add(new InventorySlot());
+            for (int i = 0; i < InventorySize; i++) _inventoryData.Add(new InventorySlot());
         }
 
         /// <summary>

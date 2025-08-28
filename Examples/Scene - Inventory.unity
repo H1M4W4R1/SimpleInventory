@@ -555,6 +555,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1213459828}
   - component: {fileID: 1213459827}
+  - component: {fileID: 1213459829}
   m_Layer: 0
   m_Name: Inventory
   m_TagString: Untagged
@@ -574,8 +575,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 836d7a0c3d6641c3a31d1fda7eb5f5c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <InventorySize>k__BackingField: 4
-  exampleItem: {fileID: 11400000, guid: f03a17de924b082438a6e9d3cb9337c4, type: 2}
+  <InventoryDropPosition>k__BackingField: {fileID: 0}
+  <InventorySize>k__BackingField: 32
 --- !u!4 &1213459828
 Transform:
   m_ObjectHideFlags: 0
@@ -591,6 +592,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1213459829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213459826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ba98b419ff14d3a9627b4a3e915b0bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  <DropPositionFallback>k__BackingField: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

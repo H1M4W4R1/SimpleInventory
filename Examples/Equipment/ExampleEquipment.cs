@@ -1,4 +1,5 @@
 ﻿using Systems.SimpleInventory.Components.Equipment;
+using Systems.SimpleInventory.Examples.Items.Abstract;
 
 namespace Systems.SimpleInventory.Examples.Equipment
 {
@@ -6,7 +7,11 @@ namespace Systems.SimpleInventory.Examples.Equipment
     {
         public override void BuildEquipmentSlots()
         {
-            
+            // Create slots
+            AddEquipmentSlotFor<HelmetItemBase>();
+            AddEquipmentSlotFor<ChestplateItemBase>();
+            AddEquipmentSlotFor<LeggingsItemBase>();
+            AddEquipmentSlotFor<BootsItemBase>();
         }
     }
 }

@@ -103,7 +103,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Remove slots that are empty
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
-                if (equipmentSlots[i] is not EquipmentSlot<TItemType>) continue;
+                if (!equipmentSlots[i].IsItemValid<TItemType>()) continue;
                 equipmentSlots.RemoveAt(i);
                 return;
             }
@@ -111,7 +111,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Remove slots with items
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
-                if (equipmentSlots[i] is not EquipmentSlot<TItemType>) continue;
+                if (!equipmentSlots[i].IsItemValid<TItemType>()) continue;
 
                 // Add item to inventory before removing slot
                 if (addItemToInventory && inventory is not null)
@@ -128,6 +128,38 @@ namespace Systems.SimpleInventory.Components.Equipment
                 equipmentSlots.RemoveAt(i);
                 return;
             }
+        }
+
+        /// <summary>
+        ///     Gets first equipped item for specific item type
+        /// </summary>
+        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
+        /// <returns>First equipped item or null if no item is equipped</returns>
+        [CanBeNull] public TItemBase GetFirstEquippedItemFor<TItemBase>()
+            where TItemBase : EquippableItemBase
+        {
+            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
+            return slot?.CurrentlyEquippedItem as TItemBase;
+        }
+
+        /// <summary>
+        ///     Gets all equipped items for specific item type
+        /// </summary>
+        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
+        /// <returns>List of equipped items</returns>
+        [NotNull] public IReadOnlyList<TItemBase> GetAllEquippedItemsFor<TItemBase>()
+            where TItemBase : EquippableItemBase
+        {
+            List<TItemBase> items = new List<TItemBase>();
+            
+            for (int i = 0; i < equipmentSlots.Count; i++)
+            {
+                if (equipmentSlots[i].IsItemValid<TItemBase>()) continue;
+                if (equipmentSlots[i].CurrentlyEquippedItem is not TItemBase item) continue;
+                items.Add(item);
+            }
+            
+            return items;
         }
 
         private void Awake()
@@ -178,6 +210,21 @@ namespace Systems.SimpleInventory.Components.Equipment
                 : GetFreeSlot(context.item);
             if (slot == null) return EquipItemResult.NoFreeSlots;
 
+            // Unequip item if was already equipped
+            if (!ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
+            {
+                if(context.slot.inventory is not null)
+                    context.slot.inventory.UnequipItem(slot.CurrentlyEquippedItem, this);
+                else
+                {
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                        ? transform
+                        : DropPositionFallback;
+                    ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
+                        1, objTransform.position, objTransform.rotation);
+                }
+            }
+            
             // Equip item to slot
             slot.EquipItem(context.item);
 
@@ -321,13 +368,16 @@ namespace Systems.SimpleInventory.Components.Equipment
             return null;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped([NotNull] in EquippableItemBase item) =>
+            GetFirstEquippedSlot(item) != null;
+
         /// <summary>
         ///     Checks if item is equipped.
         /// </summary>
         /// <param name="context">Action context</param>
         /// <returns>True if item is equipped</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in EquipItemContext context)
-            => GetFirstEquippedSlot(context.item) != null;
+            => IsEquipped(context.item);
 
         /// <summary>
         ///     Checks if item is equipped.
@@ -335,7 +385,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// <param name="context">Action context</param>
         /// <returns>True if item is equipped</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in UnequipItemContext context)
-            => GetFirstEquippedSlot(context.item) != null;
+            => IsEquipped(context.item);
 
         protected virtual void OnItemEquipped(in EquipItemContext context)
         {
