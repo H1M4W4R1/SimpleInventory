@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
 using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Assertions;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace Systems.SimpleInventory.Data
 {
@@ -13,12 +17,19 @@ namespace Systems.SimpleInventory.Data
     /// </summary>
     public static class ItemsDatabase
     {
-        private static IReadOnlyList<ItemBase> _items;
+        public const string ADDRESSABLE_LABEL = "SimpleInventory.Items";
+        private static readonly List<ItemBase> _items = new();
+
 
         /// <summary>
         ///     If true this means that all items have been loaded
         /// </summary>
         private static bool _isLoaded;
+
+        /// <summary>
+        ///     If true this means that items are currently being loaded
+        /// </summary>
+        private static bool _isLoading;
 
         /// <summary>
         ///     Total number of items in database
@@ -43,14 +54,33 @@ namespace Systems.SimpleInventory.Data
         /// <summary>
         ///     Loads all items from Resources folder
         /// </summary>
-        private static void Load()
+        private static async void Load()
         {
-            ItemBase[] items = Resources.LoadAll<ItemBase>("Items");
-            List<ItemBase> localList = items.ToList();
-            localList.Sort();
-            _items = localList;
-            
+            // Prevent multiple loads
+            if (_isLoading) return;
+            _isLoading = true;
+
+            // Load items
+            AsyncOperationHandle<IList<ItemBase>> request = Addressables.LoadAssetsAsync<ItemBase>(
+                new[] {ADDRESSABLE_LABEL}, OnItemLoaded,
+                Addressables.MergeMode.Union);
+            request.WaitForCompletion();
+
+            OnItemsLoadComplete(request);
+        }
+
+        private static void OnItemsLoadComplete(AsyncOperationHandle<IList<ItemBase>> obj)
+        {
+            // Sort after loading to ensure binary search works correctly
+            _items.Sort();
             _isLoaded = true;
+            _isLoading = false;
+        }
+
+        private static void OnItemLoaded<TObject>(TObject obj)
+        {
+            if (obj is not ItemBase item) return;
+            _items.Add(item);
         }
 
 
@@ -63,13 +93,13 @@ namespace Systems.SimpleInventory.Data
             where TItemType : ItemBase
         {
             EnsureLoaded();
-            
+
             // Loop through all items
             for (int i = 0; i < _items.Count; i++)
             {
                 if (_items[i] is TItemType item) return item;
             }
-            
+
             Assert.IsNotNull(null, "Item not found in database");
             return null;
         }
@@ -83,18 +113,18 @@ namespace Systems.SimpleInventory.Data
             where TItemType : ItemBase
         {
             EnsureLoaded();
-            
+
             List<TItemType> items = new();
-            
+
             // Loop through all items
             for (int i = 0; i < _items.Count; i++)
             {
                 if (_items[i] is TItemType item) items.Add(item);
             }
-            
+
             return items;
         }
-        
+
         /// <summary>
         ///     Gets item by identifier
         /// </summary>

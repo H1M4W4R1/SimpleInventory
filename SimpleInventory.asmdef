@@ -2,10 +2,11 @@
     "name": "SimpleInventory", 
     "rootNamespace": "",
     "references": [
+        "Unity.Addressables",
         "Unity.Burst",
         "Unity.Collections",
         "Unity.Mathematics",
-        "Detection2D"
+        "Unity.ResourceManager"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
