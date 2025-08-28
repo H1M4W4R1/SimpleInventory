@@ -50,8 +50,14 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="data">Inventory data in binary format</param>
         public void Load(byte[] data)
-            => _inventoryData.AddRange(
+        {
+            _inventoryData.Clear();
+            _inventoryData.AddRange(
                 SerializationUtility.DeserializeValue<List<InventorySlot>>(data, DataFormat.Binary));
+
+            // Check if inventory has correct size
+            while (_inventoryData.Count < InventorySize) _inventoryData.Add(new InventorySlot());
+        }
 
 #region Item Access
 
@@ -221,9 +227,9 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : EquippableItemBase
         {
             // Get all items in inventory of specified type
-            TItemType item  = toEquipment.GetFirstEquippedItemFor<TItemType>();
+            TItemType item = toEquipment.GetFirstEquippedItemFor<TItemType>();
             if (ReferenceEquals(item, null)) return UnequipItemResult.InvalidItem;
-            
+
             // Unequip item to inventory
             UnequipItem(item, toEquipment);
 
