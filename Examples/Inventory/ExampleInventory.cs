@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using JetBrains.Annotations;
-using Sirenix.OdinInspector;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Examples.Equipment;
@@ -42,13 +41,13 @@ namespace Systems.SimpleInventory.Examples.Inventory
             Debug.Log("Database item count: " + ItemsDatabase.Count);
         }
 
-        [Button("Use first food")]
+        [ContextMenu("Use first food")]
         public void UseFirstFood() => UseAnyItem<ExampleFoodBase>();
         
-        [Button("Use best food")]
+        [ContextMenu("Use best food")]
         public void UseBestFoodExample() => UseBestItem<ExampleFoodBase>();
         
-        [Button("Equip leather armor")]
+        [ContextMenu("Equip leather armor")]
         public void EquipLeatherArmor()
         {
             if (!_equipment) return;
@@ -60,7 +59,7 @@ namespace Systems.SimpleInventory.Examples.Inventory
             PrintEquippedArmor();
         }
 
-        [Button("Equip steel armor")]
+        [ContextMenu("Equip steel armor")]
         public void EquipSteelArmor()
         {
             if (!_equipment) return;
@@ -72,7 +71,7 @@ namespace Systems.SimpleInventory.Examples.Inventory
             PrintEquippedArmor();
         }
 
-        [Button("Unequip armor")]
+        [ContextMenu("Unequip armor")]
         public void UnequipArmor()
         {
             if (!_equipment) return;

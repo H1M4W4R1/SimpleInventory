@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Items.Pickup;
@@ -27,7 +26,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Drop position for inventory
         /// </summary>
-        [field: SerializeField] [Required] private Transform InventoryDropPosition { get; set; }
+        [field: SerializeField] private Transform InventoryDropPosition { get; set; }
 
         /// <summary>
         ///     Size of inventory

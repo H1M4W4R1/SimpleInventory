@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
@@ -22,7 +21,6 @@ namespace Systems.SimpleInventory.Components.Equipment
         private bool _areEquipmentSlotsBuilt;
 
         [field: SerializeField]
-        [Required]
         [Tooltip("Position to drop item at when removing slot with drop enabled")]
         private Transform DropPositionFallback { get; set; }
 
