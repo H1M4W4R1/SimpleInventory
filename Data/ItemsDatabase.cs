@@ -54,7 +54,7 @@ namespace Systems.SimpleInventory.Data
         /// <summary>
         ///     Loads all items from Resources folder
         /// </summary>
-        private static async void Load()
+        private static void Load()
         {
             // Prevent multiple loads
             if (_isLoading) return;
