@@ -2,6 +2,5 @@
 {
     public sealed class ExampleBread : ExampleFoodBase
     {
-        public override int HealthRestore => 10;
     }
 }
