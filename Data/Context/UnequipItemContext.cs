@@ -1,8 +1,9 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Abstract;
+using UnityEngine.Assertions;
 
 namespace Systems.SimpleInventory.Data.Context
 {
@@ -19,7 +20,7 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being unequipped
         /// </summary>
-        public readonly EquippableItemBase item;
+        public readonly WorldItem item;
         
         /// <summary>
         ///     Equipment where item is being unequipped
@@ -35,13 +36,14 @@ namespace Systems.SimpleInventory.Data.Context
         public UnequipItemContext(
             [CanBeNull] InventoryBase inventory,
             [NotNull] EquipmentBase equipment,
-            [NotNull] EquippableItemBase item,
+            [NotNull] WorldItem item,
             bool addToInventory = true)
         {
             this.inventory = inventory;
             this.equipment = equipment;
             this.item = item;
             this.addToInventory = addToInventory;
+            Assert.IsTrue(item.Item is EquippableItemBase, "Item is not equippable");
         }
     }
 }

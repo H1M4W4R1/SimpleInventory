@@ -86,12 +86,12 @@ namespace Systems.SimpleInventory.Examples.Inventory
         private void PrintEquippedArmor()
         {
             if (!_equipment) return;
-            HelmetItemBase helmet = _equipment.GetFirstEquippedItemFor<HelmetItemBase>();
-            ChestplateItemBase chestplate = _equipment.GetFirstEquippedItemFor<ChestplateItemBase>();
-            LeggingsItemBase leggings = _equipment.GetFirstEquippedItemFor<LeggingsItemBase>();
-            BootsItemBase boots = _equipment.GetFirstEquippedItemFor<BootsItemBase>();
+            HelmetItemBase helmet = _equipment.GetFirstEquippedBaseItemFor<HelmetItemBase>();
+            ChestplateItemBase chestplate = _equipment.GetFirstEquippedBaseItemFor<ChestplateItemBase>();
+            LeggingsItemBase leggings = _equipment.GetFirstEquippedBaseItemFor<LeggingsItemBase>();
+            BootsItemBase boots = _equipment.GetFirstEquippedBaseItemFor<BootsItemBase>();
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.AppendLine($"Helmet: {(helmet ? helmet.name : "None")}");
             sb.AppendLine($"Chestplate: {(chestplate ? chestplate.name : "None")}");
             sb.AppendLine($"Leggings: {(leggings ? leggings.name : "None")}");

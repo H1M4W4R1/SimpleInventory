@@ -1,6 +1,5 @@
 ﻿using System;
 using Systems.SimpleInventory.Data.Context;
-using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 

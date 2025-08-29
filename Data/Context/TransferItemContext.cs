@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Items.Abstract;
+using Systems.SimpleInventory.Data.Inventory;
 
 namespace Systems.SimpleInventory.Data.Context
 {
@@ -23,7 +22,7 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being transferred
         /// </summary>
-        [NotNull] public readonly ItemBase item;
+        [NotNull] public readonly WorldItem item;
         
         /// <summary>
         ///     Amount of item being transferred
@@ -38,7 +37,7 @@ namespace Systems.SimpleInventory.Data.Context
         public TransferItemContext(
             [NotNull] InventoryBase sourceInventory,
             [NotNull] InventoryBase destinationInventory,
-            [NotNull] ItemBase item,
+            [NotNull] WorldItem item,
             int amountTransferred)
         {
             this.sourceInventory = sourceInventory;

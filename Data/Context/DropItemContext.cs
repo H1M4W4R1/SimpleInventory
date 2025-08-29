@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Items.Abstract;
+using Systems.SimpleInventory.Data.Inventory;
 
 namespace Systems.SimpleInventory.Data.Context
 {
@@ -18,14 +17,14 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being dropped
         /// </summary>
-        [NotNull] public readonly ItemBase item;
+        [NotNull] public readonly WorldItem item;
         
         /// <summary>
         ///     Amount of item being dropped
         /// </summary>
         public readonly int amount;
 
-        public DropItemContext([CanBeNull] InventoryBase inventory, [NotNull] ItemBase item, int amount)
+        public DropItemContext([CanBeNull] InventoryBase inventory, [NotNull] WorldItem item, int amount)
         {
             this.inventory = inventory;
             this.item = item;

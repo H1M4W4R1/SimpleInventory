@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context.Internal;
-using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine.Assertions;
 
@@ -20,13 +20,13 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being used
         /// </summary>
-        public readonly UsableItemBase item;
+        public readonly WorldItem item;
 
         public UseItemContext([NotNull] InventoryBase inventory, int slotIndex)
         {
-            this.slot = new InventorySlotContext(inventory, slotIndex);
-            item = slot.Item as UsableItemBase;
-            Assert.AreNotEqual(item, null, "Item is not usable");
+            slot = new InventorySlotContext(inventory, slotIndex);
+            item = slot.Item;
+            Assert.IsTrue(item?.Item is UsableItemBase, "Item is not usable");
         }
     }
 }

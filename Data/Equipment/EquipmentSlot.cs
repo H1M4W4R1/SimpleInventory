@@ -1,43 +1,42 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Sirenix.Utilities;
-using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Systems.SimpleInventory.Data.Equipment
 {
-    [Serializable]
-    internal sealed class EquipmentSlot<TItemType> : EquipmentSlot
+    [Serializable] internal sealed class EquipmentSlot<TItemType> : EquipmentSlot
         where TItemType : EquippableItemBase
     {
         /// <summary>
         ///     Cached currently equipped item
         /// </summary>
-        [SerializeReference] [HideInInspector] private TItemType _currentlyEquippedItem;
+        [SerializeReference] [HideInInspector] private WorldItem currentlyEquippedItem;
 
-        public override EquippableItemBase CurrentlyEquippedItem => _currentlyEquippedItem;
+        public override WorldItem CurrentlyEquippedItem => currentlyEquippedItem;
 
         /// <summary>
         ///     Checks if the item is valid for this slot
         /// </summary>
-        public override bool IsItemValid(ItemBase item) => item is TItemType;
+        public override bool IsItemValid(WorldItem item) => item?.Item is TItemType;
 
         /// <summary>
         ///     Checks if the item is valid for this slot
         /// </summary>
         public override bool IsItemValid<TCheckType>() =>
             typeof(TCheckType).ImplementsOrInherits(typeof(TItemType));
-        
+
         /// <summary>
         ///     Equips the item in this slot
         /// </summary>
         /// <param name="item">Item to equip</param>
-        internal override void EquipItem(ItemBase item)
+        internal override void EquipItem(WorldItem item)
         {
             Assert.IsTrue(IsItemValid(item), "Item is not valid for this slot");
-            _currentlyEquippedItem = item as TItemType;
+            currentlyEquippedItem = item;
         }
 
         /// <summary>
@@ -46,8 +45,8 @@ namespace Systems.SimpleInventory.Data.Equipment
         /// <returns>True if item was unequipped, false otherwise</returns>
         internal override bool UnequipItem()
         {
-            if (_currentlyEquippedItem is null) return false;
-            _currentlyEquippedItem = null;
+            if (currentlyEquippedItem is null) return false;
+            currentlyEquippedItem = null;
             return true;
         }
     }
@@ -55,14 +54,13 @@ namespace Systems.SimpleInventory.Data.Equipment
     /// <summary>
     ///     Equipment slot
     /// </summary>
-    [Serializable]
-    internal abstract class EquipmentSlot
+    [Serializable] internal abstract class EquipmentSlot
     {
         /// <summary>
         ///     Equips the item in this slot
         /// </summary>
         /// <param name="item">Item to equip</param>
-        internal abstract void EquipItem([CanBeNull] ItemBase item);
+        internal abstract void EquipItem([CanBeNull] WorldItem item);
 
         /// <summary>
         ///     Unequips the item in this slot
@@ -75,7 +73,7 @@ namespace Systems.SimpleInventory.Data.Equipment
         /// </summary>
         /// <param name="item">Item to check</param>
         /// <returns>True if item is valid for this slot, false otherwise</returns>
-        public abstract bool IsItemValid([CanBeNull] ItemBase item);
+        public abstract bool IsItemValid([CanBeNull] WorldItem item);
 
         /// <summary>
         ///     Checks if the item is valid for this slot
@@ -88,6 +86,6 @@ namespace Systems.SimpleInventory.Data.Equipment
         /// <summary>
         ///     Item currently equipped in this slot
         /// </summary>
-        public abstract EquippableItemBase CurrentlyEquippedItem { get; }
+        public abstract WorldItem CurrentlyEquippedItem { get; }
     }
 }

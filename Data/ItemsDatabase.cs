@@ -1,6 +1,5 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleCore.Storage;
-using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Items.Abstract;
 using Systems.SimpleInventory.Data.Native.Item;
 
@@ -9,7 +8,7 @@ namespace Systems.SimpleInventory.Data
     /// <summary>
     ///     Database of all items in game
     /// </summary>
-    public class ItemsDatabase : AddressableDatabase<ItemsDatabase, ItemBase>
+    public sealed class ItemsDatabase : AddressableDatabase<ItemsDatabase, ItemBase>
     {
         public const string LABEL = "SimpleInventory.Items";
         [NotNull] protected override string AddressableLabel => LABEL;

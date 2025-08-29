@@ -1,8 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context;
-using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Items.Abstract;
+using Systems.SimpleInventory.Data.Inventory;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Components.Items.Pickup
@@ -15,7 +14,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// <summary>
         ///     Item that can be picked up
         /// </summary>
-        [field: SerializeReference] public ItemBase Item { get; private set; }
+        [field: SerializeReference] public WorldItem Item { get; private set; }
         
         /// <summary>
         ///     Amount of items that can can be picked up from this item
@@ -27,7 +26,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// </summary>
         /// <param name="item">Item to drop</param>
         /// <param name="amount">Amount of items to drop</param>
-        internal void SetData([NotNull] ItemBase item, int amount)
+        internal void SetData([NotNull] WorldItem item, int amount)
         {
             Item = item;
             Amount = amount;
@@ -50,12 +49,12 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
             if (pickedUpAmount > 0)
             {
                 toInventory.OnItemPickedUp(context);
-                Item.OnPickedUp(context);
+                Item.Item.OnPickedUp(context);
             }
             else
             {
                 toInventory.OnItemPickupFailed(context);
-                Item.OnPickupFailed(context);
+                Item.Item.OnPickupFailed(context);
             }
 
             // Pickup was performed, update amount and check object events for re-pooling or destroy

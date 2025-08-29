@@ -9,7 +9,6 @@ using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items;
 using Systems.SimpleInventory.Data.Items.Abstract;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -67,7 +66,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="slotIndex">Index of slot</param>
         /// <returns>Found item or null if slot is out of bounds or empty</returns>
-        [CanBeNull] public ItemBase GetItemAt(int slotIndex)
+        [CanBeNull] public WorldItem GetItemAt(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return null;
             return _inventoryData[slotIndex].Item;
@@ -78,19 +77,20 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <typeparam name="TItemType">Type of item to get</typeparam>
         /// <returns>Item or null if no item of specified type is found</returns>
-        public InventoryItemReference<TItemType> GetFirstItemOfType<TItemType>()
+        public InventoryItemReference GetFirstItemOfType<TItemType>()
             where TItemType : ItemBase
         {
             // Loop through all items
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                ItemBase itemData = _inventoryData[i].Item;
+                WorldItem itemData = _inventoryData[i].Item;
+                if (itemData is null) continue;
 
                 // Check if item is of desired type and return reference
-                if (itemData is TItemType item) return new InventoryItemReference<TItemType>(i, item);
+                if (itemData.Item is TItemType) return new InventoryItemReference(i, itemData);
             }
 
-            return new InventoryItemReference<TItemType>(-1, null);
+            return new InventoryItemReference(-1, null);
         }
 
         /// <summary>
@@ -98,16 +98,17 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <typeparam name="TItemType">Type of item to get</typeparam>
         /// <returns>Read-only list of items of specified type</returns>
-        [NotNull] public IReadOnlyList<InventoryItemReference<TItemType>> GetAllItemsOfType<TItemType>()
+        [NotNull] public IReadOnlyList<InventoryItemReference> GetAllItemsOfType<TItemType>()
             where TItemType : ItemBase
         {
-            List<InventoryItemReference<TItemType>> items = new();
+            List<InventoryItemReference> items = new();
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                ItemBase itemData = _inventoryData[i].Item;
+                WorldItem itemData = _inventoryData[i].Item;
+                if (itemData is null) continue;
 
                 // Check if item is of desired type and add to cache
-                if (itemData is TItemType item) items.Add(new InventoryItemReference<TItemType>(i, item));
+                if (itemData.Item is TItemType) items.Add(new InventoryItemReference(i, itemData));
             }
 
             return items;
@@ -135,10 +136,11 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return EquipItemResult.InvalidSlot;
 
             // Get item at slot
-            ItemBase item = _inventoryData[slotIndex].Item;
+            WorldItem item = _inventoryData[slotIndex].Item;
+            if (item is null) return EquipItemResult.InvalidItem;
 
             // Check if item is equippable
-            if (item is not EquippableItemBase) return EquipItemResult.InvalidItem;
+            if (item.Item is not EquippableItemBase) return EquipItemResult.InvalidItem;
 
             // Create context
             EquipItemContext context = new(toEquipment, this, slotIndex, removeFromInventory: removeFromInventory,
@@ -152,18 +154,18 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="item">Item to unequip</param>
         /// <param name="fromEquipment">Equipment to unequip item from</param>
+        /// <param name="addToInventory">Whether to add item to inventory</param>
         /// <returns>Result of the unequip operation</returns>
         /// <remarks>
         ///     Do not use if item is already in inventory (will duplicate items).
         ///     In such case use <see cref="UnequipItem(int, EquipmentBase)"/>
         /// </remarks>
-        public UnequipItemResult UnequipItem([NotNull] ItemBase item, [NotNull] EquipmentBase fromEquipment)
+        public UnequipItemResult UnequipItem([NotNull] WorldItem item, [NotNull] EquipmentBase fromEquipment,
+            bool addToInventory = true)
         {
-            // Check if item is equippable
-            if (item is not EquippableItemBase equippableItem) return UnequipItemResult.InvalidItem;
-
             // Create context
-            UnequipItemContext context = new(this, fromEquipment, equippableItem, addToInventory: true);
+            UnequipItemContext context = new(this, fromEquipment,
+                item, addToInventory: addToInventory);
             return fromEquipment.Unequip(context);
         }
 
@@ -175,7 +177,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <returns>Result of the unequip operation</returns>
         /// <remarks>
         ///     If you are removing item from inventory on <see cref="EquipItem"/>,
-        ///     use <see cref="UnequipItem(ItemBase, EquipmentBase)"/>
+        ///     use <see cref="UnequipItem(WorldItem, EquipmentBase, bool)"/>
         /// </remarks>
         public UnequipItemResult UnequipItem(int slotIndex, [NotNull] EquipmentBase fromEquipment)
         {
@@ -183,14 +185,12 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UnequipItemResult.InvalidSlot;
 
             // Get item
-            ItemBase item = _inventoryData[slotIndex].Item;
-
-            // Check if item is equippable
-            if (item is not EquippableItemBase equippableItem) return UnequipItemResult.InvalidItem;
-
+            WorldItem item = _inventoryData[slotIndex].Item;
+            if (item is null) return UnequipItemResult.InvalidItem;
+     
             // Create context
             // We don't add to inventory as it's already here
-            UnequipItemContext context = new(this, fromEquipment, equippableItem, addToInventory: false);
+            UnequipItemContext context = new(this, fromEquipment, item, addToInventory: false);
             return fromEquipment.Unequip(context);
         }
 
@@ -209,7 +209,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : EquippableItemBase
         {
             // Get first item
-            InventoryItemReference<TItemType> itemReference = GetFirstItemOfType<TItemType>();
+            InventoryItemReference itemReference = GetFirstItemOfType<TItemType>();
             if (itemReference.item is null) return EquipItemResult.InvalidItem;
 
             return EquipItem(itemReference.slotIndex, toEquipment, removeFromInventory, allowReplace);
@@ -219,20 +219,20 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Equips any item of specified type
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
-        /// <param name="removeFromInventory">Whether to remove item from inventory</param>
+        /// <param name="addToInventory">Whether to remove item from inventory</param>
         /// <typeparam name="TItemType">Item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
         public UnequipItemResult UnequipAnyItem<TItemType>(
             [NotNull] EquipmentBase toEquipment,
-            bool removeFromInventory = true)
+            bool addToInventory = true)
             where TItemType : EquippableItemBase
         {
             // Get all items in inventory of specified type
-            TItemType item = toEquipment.GetFirstEquippedItemFor<TItemType>();
+            WorldItem item = toEquipment.GetFirstEquippedItemFor<TItemType>();
             if (ReferenceEquals(item, null)) return UnequipItemResult.InvalidItem;
 
             // Unequip item to inventory
-            UnequipItem(item, toEquipment);
+            UnequipItem(item, toEquipment, addToInventory);
 
             // Item is not equipped
             return UnequipItemResult.NotEquipped;
@@ -251,19 +251,23 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : EquippableItemBase, IComparable<TItemType>
         {
             // Get all items
-            IReadOnlyList<InventoryItemReference<TItemType>> items = GetAllItemsOfType<TItemType>();
+            IReadOnlyList<InventoryItemReference> items = GetAllItemsOfType<TItemType>();
             if (items.Count == 0) return EquipItemResult.InvalidItem;
 
             // Find best item
-            InventoryItemReference<TItemType> bestItem = items[0];
+            InventoryItemReference bestItemReference = items[0];
             for (int i = 1; i < items.Count; i++)
             {
+                // Perform conversion
+                IComparable<TItemType> itemCompare = items[i].item.Item;
+                TItemType bestItem = bestItemReference.item.Item as TItemType;
+
                 // Compare items
-                if (items[i].item.CompareTo(bestItem.item) > 0) bestItem = items[i];
+                if (itemCompare.CompareTo(bestItem) > 0) bestItemReference = items[i];
             }
 
             // Use best item
-            return EquipItem(bestItem.slotIndex, toEquipment, removeFromInventory);
+            return EquipItem(bestItemReference.slotIndex, toEquipment, removeFromInventory);
         }
 
 #endregion
@@ -281,10 +285,11 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UseItemResult.InvalidItem;
 
             // Get item
-            ItemBase item = _inventoryData[slotIndex].Item;
+            WorldItem item = _inventoryData[slotIndex].Item;
 
             // Check if item is equippable
-            if (item is not UsableItemBase usableItem) return UseItemResult.InvalidItem;
+            if (item is null) return UseItemResult.InvalidItem;
+            if (item.Item is not UsableItemBase usableItem) return UseItemResult.InvalidItem;
 
             // Create context
             UseItemContext context = new(this, slotIndex);
@@ -303,7 +308,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : UsableItemBase
         {
             // Get first item
-            InventoryItemReference<TItemType> itemReference = GetFirstItemOfType<TItemType>();
+            InventoryItemReference itemReference = GetFirstItemOfType<TItemType>();
             if (itemReference.item is null) return UseItemResult.InvalidItem;
 
             return UseItem(itemReference.slotIndex);
@@ -318,21 +323,22 @@ namespace Systems.SimpleInventory.Components.Inventory
             where TItemType : UsableItemBase, IComparable<TItemType>
         {
             // Get all items
-            IReadOnlyList<InventoryItemReference<TItemType>> items = GetAllItemsOfType<TItemType>();
+            IReadOnlyList<InventoryItemReference> items = GetAllItemsOfType<TItemType>();
             if (items.Count == 0) return UseItemResult.InvalidItem;
 
             // Find best item
-            InventoryItemReference<TItemType> bestItem = items[0];
+            InventoryItemReference bestItemReference = items[0];
             for (int i = 1; i < items.Count; i++)
             {
                 // Compare items, conversion to interface prevents fuck-ups from compiler taking ItemBase.CompareTo
                 // instead of TItemType.CompareTo
-                IComparable<TItemType> itemCompare = items[i].item;
-                if (itemCompare.CompareTo(bestItem.item) > 0) bestItem = items[i];
+                IComparable<TItemType> itemCompare = items[i].item.Item;
+                TItemType bestItem = bestItemReference.item as TItemType;
+                if (itemCompare.CompareTo(bestItem) > 0) bestItemReference = items[i];
             }
 
             // Use best item
-            return UseItem(bestItem.slotIndex);
+            return UseItem(bestItemReference.slotIndex);
         }
 
 #endregion
@@ -347,7 +353,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         /// <returns>True if item was dropped, false otherwise</returns>
         public bool DropItemAs<TPickupItemType>(
-            [NotNull] ItemBase item,
+            [NotNull] WorldItem item,
             int amount)
             where TPickupItemType : PickupItem, new()
         {
@@ -363,7 +369,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Call events
             OnItemDropped(context);
-            item.OnItemDropped(context);
+            item.Item.OnItemDropped(context);
             return true;
         }
 
@@ -383,7 +389,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return false;
 
             // Get item
-            ItemBase itemReference = GetItemAt(slotIndex);
+            WorldItem itemReference = GetItemAt(slotIndex);
             if (itemReference is null) return false;
 
             // Spawn object
@@ -398,7 +404,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Call events
             OnItemDropped(context);
-            itemReference.OnItemDropped(context);
+            itemReference.Item.OnItemDropped(context);
             return true;
         }
 
@@ -410,7 +416,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="targetInventory">Inventory to transfer item to</param>
         /// <param name="amount">Amount of items to transfer</param>
         /// <returns>True if transfer was successful</returns>
-        public bool TransferItems([NotNull] ItemBase itemBase, [NotNull] InventoryBase targetInventory, int amount)
+        public bool TransferItems(
+            [NotNull] WorldItem itemBase,
+            [NotNull] InventoryBase targetInventory,
+            int amount)
         {
             // Check if this inventory has enough items
             if (!Has(itemBase, amount)) return false;
@@ -429,7 +438,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             TransferItemContext context = new(this, targetInventory, itemBase, amount);
 
             // Call events
-            itemBase.OnTransfer(context);
+            itemBase.Item.OnTransfer(context);
             return true;
         }
 
@@ -461,9 +470,12 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Get slots
             InventorySlot sourceSlotData = _inventoryData[sourceSlot];
             InventorySlot targetSlotData = targetInventory._inventoryData[targetSlot];
+            
+            // Check if original item is null
+            if (sourceSlotData.Item is null) return false;
 
-            // Handle target slot having same item id
-            if (ReferenceEquals(sourceSlotData.Item, targetSlotData.Item))
+            // Handle target slot having same item
+            if (Equals(sourceSlotData.Item, targetSlotData.Item))
             {
                 // Handle stack transfer
                 int spaceLeft = targetSlotData.SpaceLeft;
@@ -480,7 +492,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 sourceSlotData.Amount -= amountToTransfer;
 
                 // Call events
-                sourceTransferContext.item.OnTransfer(sourceTransferContext);
+                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
                 return true;
             }
 
@@ -502,9 +514,8 @@ namespace Systems.SimpleInventory.Components.Inventory
                 InventorySlot.Swap(sourceSlotData, targetSlotData);
 
                 // Call events
-                sourceTransferContext.item.OnTransfer(sourceTransferContext);
-                targetTransferContext.item.OnTransfer(targetTransferContext);
-                return true;
+                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
+                targetTransferContext.item.Item.OnTransfer(targetTransferContext);
             }
             else
             {
@@ -520,9 +531,10 @@ namespace Systems.SimpleInventory.Components.Inventory
                 sourceSlotData.Amount = 0;
 
                 // Call events
-                sourceTransferContext.item.OnTransfer(sourceTransferContext);
-                return true;
+                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
             }
+
+            return true;
         }
 
         /// <summary>
@@ -554,44 +566,18 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if inventory can store specified amount of items
         /// </summary>
-        /// <param name="amount">Amount that may be stored</param>
-        /// <typeparam name="TItemType">Type of item to check</typeparam>
-        /// <returns>True if inventory can store specified amount of items, false otherwise</returns>
-        public bool CanStore<TItemType>(int amount)
-            where TItemType : ItemBase, new()
-        {
-            TItemType item = ItemsDatabase.GetExact<TItemType>();
-            if (item is null) return false;
-            return CanStore(item, amount);
-        }
-
-        /// <summary>
-        ///     Checks if inventory can store specified amount of items
-        /// </summary>
         /// <param name="itemBase">Item to check</param>
         /// <param name="amount">Amount that may be stored</param>
         /// <returns>True if inventory can store specified amount of items, false otherwise</returns>
-        public bool CanStore([NotNull] ItemBase itemBase, int amount) => GetFreeSpaceFor(itemBase) >= amount;
-
-        /// <summary>
-        ///     Gets free space for item
-        /// </summary>
-        /// <typeparam name="TItemType">Type of item to get free space for</typeparam>
-        /// <returns>Free space for item</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public int GetFreeSpaceFor<TItemType>()
-            where TItemType : ItemBase, new()
-        {
-            TItemType item = ItemsDatabase.GetExact<TItemType>();
-            if (item is null) return 0;
-            return GetFreeSpaceFor(item);
-        }
+        public bool CanStore([NotNull] WorldItem itemBase, int amount) =>
+            GetFreeSpaceFor(itemBase) >= amount;
 
         /// <summary>
         ///     Gets free space for item
         /// </summary>
         /// <param name="itemBase">Item to get free space for</param>
         /// <returns>Free space for item</returns>
-        public int GetFreeSpaceFor([NotNull] ItemBase itemBase)
+        public int GetFreeSpaceFor([NotNull] WorldItem itemBase)
         {
             // Count free space for item
             int freeSpace = 0;
@@ -600,7 +586,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 InventorySlot slot = _inventoryData[i];
                 if (ReferenceEquals(slot.Item, null))
                     freeSpace += itemBase.MaxStack;
-                else if (ReferenceEquals(slot.Item, itemBase)) freeSpace += slot.SpaceLeft;
+                else if (Equals(slot.Item, itemBase)) freeSpace += slot.SpaceLeft;
             }
 
             return freeSpace;
@@ -617,7 +603,10 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             TItemType item = ItemsDatabase.GetExact<TItemType>();
             if (item is null) return amount;
-            return TryAdd(item, amount);
+
+            // Generate item
+            WorldItem worldItem = item.GenerateWorldItem();
+            return TryAdd(worldItem, amount);
         }
 
         /// <summary>
@@ -667,7 +656,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to add</param>
         /// <param name="amountToAdd">Amount of item to add</param>
         /// <returns>Amount of items that could not be added</returns>
-        public int TryAdd([NotNull] ItemBase item, int amountToAdd)
+        public int TryAdd([NotNull] WorldItem item, int amountToAdd)
         {
             // Prevent execution if inventory is not created
             if (_inventoryData is null) return amountToAdd;
@@ -682,7 +671,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 InventorySlot slot = _inventoryData[i];
 
                 // Check if slot is occupied by same item
-                if (!ReferenceEquals(slot.Item, item)) continue;
+                if (!Equals(slot.Item, item)) continue;
 
                 // Check if slot has enough space
                 int spaceLeft = slot.SpaceLeft;
@@ -723,7 +712,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="item">Item to add</param>
         /// <param name="amountToAdd">Amount of items to add</param>
-        public void TryAddOrDrop([NotNull] ItemBase item, int amountToAdd)
+        public void TryAddOrDrop([NotNull] WorldItem item, int amountToAdd)
         {
             int remaining = TryAdd(item, amountToAdd);
             if (remaining == 0) return;
@@ -751,7 +740,64 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Compute all slots that contain item
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                if (!ReferenceEquals(_inventoryData[i].Item, item)) continue;
+                WorldItem itemData = _inventoryData[i].Item;
+                if (itemData is null) continue;
+                if (!Equals(itemData.Item, item)) continue;
+                
+                currentItemCount += _inventoryData[i].Amount;
+                itemSlots.Add(i);
+                if (currentItemCount >= amountToTake) break;
+            }
+
+            // Return false if not enough items
+            if (currentItemCount < amountToTake)
+            {
+                itemSlots.Dispose();
+                return false;
+            }
+
+            // Take enough items
+            for (int i = 0; i < itemSlots.Length; i++)
+            {
+                InventorySlot slot = _inventoryData[itemSlots[i]];
+
+                // Perform take operation
+                int nToTake = math.min(amountToTake, slot.Amount);
+                slot.Amount -= nToTake;
+                amountToTake -= nToTake;
+
+                // If slot is empty, remove item reference
+                if (slot.Amount == 0) slot.Item = null;
+
+                // Return true if enough items were taken
+                if (amountToTake == 0) break;
+            }
+
+            itemSlots.Dispose();
+            return true;
+        }
+        
+        /// <summary>
+        ///     Tries to remove items from inventory
+        /// </summary>
+        /// <param name="item">Item to remove</param>
+        /// <param name="amountToTake">Amount of item to remove</param>
+        /// <returns>True if items were removed, false otherwise</returns>
+        public bool TryTake([NotNull] WorldItem item, int amountToTake)
+        {
+            // Prevent execution if inventory is not created
+            if (_inventoryData is null) return false;
+
+            // Prevent execution if count is invalid
+            if (amountToTake <= 0) return false;
+
+            int currentItemCount = 0;
+            UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
+
+            // Compute all slots that contain item
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                if (!Equals(_inventoryData[i].Item, item)) continue;
                 currentItemCount += _inventoryData[i].Amount;
                 itemSlots.Add(i);
                 if (currentItemCount >= amountToTake) break;
@@ -791,8 +837,34 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to check</param>
         /// <param name="amount">Amount of item to expect</param>
         /// <returns>True if inventory has enough items, false otherwise</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([NotNull] WorldItem item, int amount)
+            => Count(item) >= amount;
+
+        /// <summary>
+        ///     Checks if inventory has enough items
+        /// </summary>
+        /// <param name="item">Item to check</param>
+        /// <param name="amount">Amount of item to expect</param>
+        /// <returns>True if inventory has enough items, false otherwise</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([NotNull] ItemBase item, int amount)
             => Count(item) >= amount;
+
+        /// <summary>
+        ///     Counts items in inventory
+        /// </summary>
+        /// <param name="item">Item to count</param>
+        /// <returns>Count of items</returns>
+        public int Count([NotNull] WorldItem item)
+        {
+            int totalItemCount = 0;
+
+            for (int i = 0; i < _inventoryData.Count; i++)
+            {
+                if (Equals(_inventoryData[i].Item, item)) totalItemCount += _inventoryData[i].Amount;
+            }
+
+            return totalItemCount;
+        }
 
         /// <summary>
         ///     Counts items in inventory
@@ -805,7 +877,11 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                if (ReferenceEquals(_inventoryData[i].Item, item)) totalItemCount += _inventoryData[i].Amount;
+                WorldItem itemData = _inventoryData[i].Item;
+                if (itemData is null) continue;
+                
+                if (ReferenceEquals(itemData.Item, item))
+                    totalItemCount += _inventoryData[i].Amount;
             }
 
             return totalItemCount;
@@ -868,13 +944,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="parent">Parent of dropped item</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         internal static void SpawnItemObject<TPickupItemType>(
-            [NotNull] ItemBase item,
+            [NotNull] WorldItem item,
             int amount,
             in Vector3 position,
             in Quaternion rotation,
             [CanBeNull] Transform parent = null)
             where TPickupItemType : PickupItem, new() =>
-            item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
+            item.Item.SpawnPickup<TPickupItemType>(item, amount, position, rotation, parent);
 
 #endregion
     }

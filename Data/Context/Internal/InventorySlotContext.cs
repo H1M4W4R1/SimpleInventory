@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Items.Abstract;
+using Systems.SimpleInventory.Data.Inventory;
 
 namespace Systems.SimpleInventory.Data.Context.Internal
 {
@@ -13,7 +12,7 @@ namespace Systems.SimpleInventory.Data.Context.Internal
         [CanBeNull] public readonly InventoryBase inventory;
         public readonly int slotIndex;
 
-        [CanBeNull] public ItemBase Item
+        [CanBeNull] public WorldItem Item
         {
             get
             {

@@ -33,7 +33,7 @@ namespace Systems.SimpleInventory.Data.Native.Item
         /// </summary>
         public ItemID(long ticks, long shift)
         {
-            this.vectorized = int4.zero;
+            vectorized = int4.zero;
             this.ticks = ticks;
             this.shift = shift;
         }

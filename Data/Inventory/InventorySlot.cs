@@ -1,7 +1,5 @@
 ﻿using System;
 using JetBrains.Annotations;
-using Systems.SimpleInventory.Data.Items;
-using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Data.Inventory
@@ -14,10 +12,8 @@ namespace Systems.SimpleInventory.Data.Inventory
     {
         /// <summary>
         ///     Item in the slot
-        ///     TODO: Rework as InventoryItem instead of ItemBase to support
-        ///           custom item properties and statistics
         /// </summary>
-        [field: SerializeReference] public ItemBase Item { get; internal set; }
+        [field: SerializeField] [CanBeNull] public WorldItem Item { get; internal set; }
         
         /// <summary>
         ///     Amount of items in the slot
@@ -27,12 +23,12 @@ namespace Systems.SimpleInventory.Data.Inventory
         /// <summary>
         ///     Space left in the slot
         /// </summary>
-        public int SpaceLeft => Item.MaxStack - Amount;
+        public int SpaceLeft => Item?.MaxStack - Amount ?? 0;
         
         /// <summary>
         ///     Max stack size of the item
         /// </summary>
-        public int MaxStack => Item.MaxStack;
+        public int MaxStack => Item?.MaxStack ?? 0;
 
         /// <summary>
         ///     Swaps the contents of two item slots
@@ -40,7 +36,7 @@ namespace Systems.SimpleInventory.Data.Inventory
         public static void Swap([NotNull] InventorySlot a, [NotNull] InventorySlot b)
         {
             // Cache values
-            ItemBase tempItem = a.Item;
+            WorldItem tempItem = a.Item;
             int tempAmount = a.Amount;
             
             // Swap values

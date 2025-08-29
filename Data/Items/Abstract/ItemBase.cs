@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Systems.SimpleCore.Automation.Attributes;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
+using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
 
@@ -96,14 +97,14 @@ namespace Systems.SimpleInventory.Data.Items.Abstract
         ///     Spawns item as pickup object, this triggers <see cref="OnItemDropped"/> event and should be used
         ///     from external scripts 
         /// </summary>
-        /// <param name="item">Item to spawn</param>
+        /// <param name="itemObj">Item to spawn</param>
         /// <param name="amount">Amount of items to drop</param>
         /// <param name="position">Position to drop item at</param>
         /// <param name="rotation">Rotation of dropped item</param>
         /// <param name="parent">Parent of dropped item</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         public static void DropItem<TPickupItemType>(
-            [NotNull] ItemBase item,
+            [NotNull] WorldItem itemObj,
             int amount,
             in Vector3 position,
             in Quaternion rotation,
@@ -111,22 +112,24 @@ namespace Systems.SimpleInventory.Data.Items.Abstract
             where TPickupItemType : PickupItem, new()
         {
             // Spawn pickup
-            item.SpawnPickup<TPickupItemType>(amount, position, rotation, parent);
+            itemObj.Item.SpawnPickup<TPickupItemType>(itemObj, amount, position, rotation, parent);
             
             // Call event
-            item.OnItemDropped(new DropItemContext(null, item, amount));
+            itemObj.Item.OnItemDropped(new DropItemContext(null, itemObj, amount));
         }
 
 
         /// <summary>
         ///     Spawns item as pickup object
         /// </summary>
+        /// <param name="itemObj">Item object to spawn</param>
         /// <param name="amount">Amount of items to drop</param>
         /// <param name="position">Position to drop item at</param>
         /// <param name="rotation">Rotation of dropped item</param>
         /// <param name="parent">Parent of dropped item</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         internal void SpawnPickup<TPickupItemType>(
+            [NotNull] WorldItem itemObj,
             int amount,
             in Vector3 position,
             in Quaternion rotation,
@@ -144,9 +147,22 @@ namespace Systems.SimpleInventory.Data.Items.Abstract
             if (!obj.TryGetComponent(out TPickupItemType pickupObj))
                 pickupObj = obj.AddComponent<TPickupItemType>();
 
-            pickupObj.SetData(this, amount);
+            pickupObj.SetData(itemObj, amount);
         }
 
 #endregion
+
+        /// <summary>
+        ///     Generates world item for this item
+        /// </summary>
+        /// <returns>New world item</returns>
+        /// <remarks>
+        ///     When overriding get original generated output and append modifications
+        ///     after that (constructor is not accessible from outside).
+        /// </remarks>
+        [NotNull] public virtual WorldItem GenerateWorldItem()
+        {
+            return new WorldItem(this);
+        }
     }
 }
