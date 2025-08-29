@@ -1,4 +1,4 @@
-﻿using Systems.SimpleInventory.Examples.Items.Abstract;
+﻿using Systems.SimpleInventory.Examples.Items.Armour.Abstract;
 
 namespace Systems.SimpleInventory.Examples.Items.Armour
 {

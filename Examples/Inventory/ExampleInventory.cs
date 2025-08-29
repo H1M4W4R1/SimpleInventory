@@ -3,9 +3,10 @@ using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Examples.Equipment;
-using Systems.SimpleInventory.Examples.Items.Abstract;
 using Systems.SimpleInventory.Examples.Items.Armour;
+using Systems.SimpleInventory.Examples.Items.Armour.Abstract;
 using Systems.SimpleInventory.Examples.Items.Food;
+using Systems.SimpleInventory.Examples.Items.Food.Abstract;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Examples.Inventory

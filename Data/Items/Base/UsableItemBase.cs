@@ -1,6 +1,6 @@
 ﻿using Systems.SimpleInventory.Data.Context;
 
-namespace Systems.SimpleInventory.Data.Items.Abstract
+namespace Systems.SimpleInventory.Data.Items.Base
 {
     /// <summary>
     ///     Item that can be used.

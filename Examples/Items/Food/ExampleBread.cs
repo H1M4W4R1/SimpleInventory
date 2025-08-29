@@ -1,4 +1,6 @@
-﻿namespace Systems.SimpleInventory.Examples.Items.Food
+﻿using Systems.SimpleInventory.Examples.Items.Food.Abstract;
+
+namespace Systems.SimpleInventory.Examples.Items.Food
 {
     public sealed class ExampleBread : ExampleFoodBase
     {

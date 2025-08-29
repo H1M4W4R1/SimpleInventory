@@ -4,10 +4,11 @@ using Systems.SimpleCore.Automation.Attributes;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
+using Systems.SimpleInventory.Data.Items.Data;
 using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
 
-namespace Systems.SimpleInventory.Data.Items.Abstract
+namespace Systems.SimpleInventory.Data.Items.Base
 {
     /// <summary>
     ///     Basic class for inventory items - should be used as base for all inventory items
@@ -113,7 +114,7 @@ namespace Systems.SimpleInventory.Data.Items.Abstract
         {
             // Spawn pickup
             itemObj.Item.SpawnPickup<TPickupItemType>(itemObj, amount, position, rotation, parent);
-            
+
             // Call event
             itemObj.Item.OnItemDropped(new DropItemContext(null, itemObj, amount));
         }
@@ -155,14 +156,9 @@ namespace Systems.SimpleInventory.Data.Items.Abstract
         /// <summary>
         ///     Generates world item for this item
         /// </summary>
+        /// <param name="itemData">Data for the world item</param>
         /// <returns>New world item</returns>
-        /// <remarks>
-        ///     When overriding get original generated output and append modifications
-        ///     after that (constructor is not accessible from outside).
-        /// </remarks>
-        [NotNull] public virtual WorldItem GenerateWorldItem()
-        {
-            return new WorldItem(this);
-        }
+        [NotNull] public virtual WorldItem GenerateWorldItem([CanBeNull] ItemData itemData) => 
+            new(this, itemData);
     }
 }

@@ -9,7 +9,8 @@ using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Abstract;
+using Systems.SimpleInventory.Data.Items.Base;
+using Systems.SimpleInventory.Data.Items.Data;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
@@ -250,24 +251,12 @@ namespace Systems.SimpleInventory.Components.Inventory
             bool removeFromInventory = true)
             where TItemType : EquippableItemBase, IComparable<TItemType>
         {
-            // Get all items
-            IReadOnlyList<InventoryItemReference> items = GetAllItemsOfType<TItemType>();
-            if (items.Count == 0) return EquipItemResult.InvalidItem;
-
-            // Find best item
-            InventoryItemReference bestItemReference = items[0];
-            for (int i = 1; i < items.Count; i++)
-            {
-                // Perform conversion
-                IComparable<TItemType> itemCompare = items[i].item.Item;
-                TItemType bestItem = bestItemReference.item.Item as TItemType;
-
-                // Compare items
-                if (itemCompare.CompareTo(bestItem) > 0) bestItemReference = items[i];
-            }
-
+            // Get best item
+            InventoryItemReference? bestItemReference = GetBestItem<TItemType>();
+            if (bestItemReference is null) return EquipItemResult.InvalidItem;
+            
             // Use best item
-            return EquipItem(bestItemReference.slotIndex, toEquipment, removeFromInventory);
+            return EquipItem(bestItemReference.Value.slotIndex, toEquipment, removeFromInventory);
         }
 
 #endregion
@@ -314,6 +303,25 @@ namespace Systems.SimpleInventory.Components.Inventory
             return UseItem(itemReference.slotIndex);
         }
 
+        [CanBeNull] public InventoryItemReference? GetBestItem<TItemType>()
+            where TItemType : ItemBase
+        {
+            // Get all items
+            IReadOnlyList<InventoryItemReference> items = GetAllItemsOfType<TItemType>();
+            if (items.Count == 0) return null;
+
+            // Find best item
+            InventoryItemReference bestItemReference = items[0];
+            for (int i = 1; i < items.Count; i++)
+            {
+                // Compare items
+                int comparison = items[i].item.CompareTo(bestItemReference.item);
+                if (comparison > 0) bestItemReference = items[i];
+            }
+            
+            return bestItemReference;
+        }
+        
         /// <summary>
         ///     Uses best item of specified type
         /// </summary>
@@ -322,23 +330,12 @@ namespace Systems.SimpleInventory.Components.Inventory
         public UseItemResult UseBestItem<TItemType>()
             where TItemType : UsableItemBase, IComparable<TItemType>
         {
-            // Get all items
-            IReadOnlyList<InventoryItemReference> items = GetAllItemsOfType<TItemType>();
-            if (items.Count == 0) return UseItemResult.InvalidItem;
-
-            // Find best item
-            InventoryItemReference bestItemReference = items[0];
-            for (int i = 1; i < items.Count; i++)
-            {
-                // Compare items, conversion to interface prevents fuck-ups from compiler taking ItemBase.CompareTo
-                // instead of TItemType.CompareTo
-                IComparable<TItemType> itemCompare = items[i].item.Item;
-                TItemType bestItem = bestItemReference.item as TItemType;
-                if (itemCompare.CompareTo(bestItem) > 0) bestItemReference = items[i];
-            }
-
+            // Get best item
+            InventoryItemReference? bestItemReference = GetBestItem<TItemType>();
+            if (bestItemReference is null) return UseItemResult.InvalidItem;
+            
             // Use best item
-            return UseItem(bestItemReference.slotIndex);
+            return UseItem(bestItemReference.Value.slotIndex);
         }
 
 #endregion
@@ -596,16 +593,17 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///  Try to add item by type
         /// </summary>
         /// <param name="amount">Amount of items to add</param>
+        /// <param name="itemData">Data for the world item</param>
         /// <typeparam name="TItemType">Type of item to add</typeparam>
         /// <returns>Amount of items that could not be added</returns>
-        public int TryAdd<TItemType>(int amount)
+        public int TryAdd<TItemType>(int amount, [CanBeNull] ItemData itemData = null)
             where TItemType : ItemBase, new()
         {
             TItemType item = ItemsDatabase.GetExact<TItemType>();
             if (item is null) return amount;
 
             // Generate item
-            WorldItem worldItem = item.GenerateWorldItem();
+            WorldItem worldItem = item.GenerateWorldItem(itemData);
             return TryAdd(worldItem, amount);
         }
 
@@ -694,17 +692,17 @@ namespace Systems.SimpleInventory.Components.Inventory
                 if (!ReferenceEquals(slot.Item, null)) continue;
 
                 // Add items to slot
-                int nToAdd = item.MaxStack;
+                int nToAdd = math.min(item.MaxStack, amountToAdd);
                 slot.Amount += nToAdd;
                 amountToAdd -= nToAdd;
                 slot.Item = item;
 
                 // Check if all items were added
-                if (amountToAdd == 0) break;
+                if (amountToAdd <= 0) break;
             }
 
             // Return remaining amount
-            return amountToAdd;
+            return amountToAdd <= 0 ? 0 : amountToAdd;
         }
 
         /// <summary>
