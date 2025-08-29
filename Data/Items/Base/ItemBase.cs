@@ -14,7 +14,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
     ///     Basic class for inventory items - should be used as base for all inventory items
     ///     with custom logic.
     /// </summary>
-    [Serializable] [AutoCreatedObject("Items", ItemsDatabase.LABEL)]
+    [Serializable] [AutoCreate("Items", ItemsDatabase.LABEL)]
     public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<ItemID>
     {
         /// <summary>
