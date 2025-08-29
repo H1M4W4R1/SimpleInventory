@@ -36,6 +36,16 @@ namespace Systems.SimpleInventory.Data.Inventory
         /// <summary>
         ///     Compares this world item to another world item
         /// </summary>
+        /// <remarks>
+        ///     To operate properly both items should have their data set and
+        ///     item data should be of same type.
+        ///     <br/><br/>
+        ///     Of course, it's possible to implement custom data comparison between different
+        ///     data types, but it's not recommended.
+        ///     <br/><br/>
+        ///     Failsafe for null-data is to consider it as worse item. If both items have null-data,
+        ///     they're considered equal.
+        /// </remarks>
         public int CompareTo([NotNull] WorldItem other)
         {
             if (ReferenceEquals(Data, other.Data)) return 0;
