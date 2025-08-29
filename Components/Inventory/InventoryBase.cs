@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data;
@@ -39,26 +38,6 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         // ReSharper disable once CollectionNeverUpdated.Local
         private readonly List<InventorySlot> _inventoryData = new();
-
-        /// <summary>
-        ///     Saves inventory data to binary format
-        /// </summary>
-        /// <returns>Inventory data in binary format</returns>
-        public byte[] Save() => SerializationUtility.SerializeValue(_inventoryData, DataFormat.Binary);
-
-        /// <summary>
-        ///     Loads inventory data from binary format
-        /// </summary>
-        /// <param name="data">Inventory data in binary format</param>
-        public void Load(byte[] data)
-        {
-            _inventoryData.Clear();
-            _inventoryData.AddRange(
-                SerializationUtility.DeserializeValue<List<InventorySlot>>(data, DataFormat.Binary));
-
-            // Check if inventory has correct size
-            while (_inventoryData.Count < InventorySize) _inventoryData.Add(new InventorySlot());
-        }
 
 #region Item Access
 

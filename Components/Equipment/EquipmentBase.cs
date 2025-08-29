@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-using Sirenix.Serialization;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
@@ -27,23 +26,6 @@ namespace Systems.SimpleInventory.Components.Equipment
 
         // ReSharper disable once CollectionNeverUpdated.Global
         internal readonly List<EquipmentSlot> equipmentSlots = new();
-
-        /// <summary>
-        ///     Converts equipment slots to binary data
-        /// </summary>
-        /// <returns>Data in binary format</returns>
-        public byte[] Save() => SerializationUtility.SerializeValue(equipmentSlots, DataFormat.Binary);
-
-        /// <summary>
-        ///     Converts binary data to equipment slots
-        /// </summary>
-        /// <param name="data">Data in binary format</param>
-        public void Load(byte[] data)
-        {
-            equipmentSlots.Clear();
-            equipmentSlots.AddRange(
-                SerializationUtility.DeserializeValue<List<EquipmentSlot>>(data, DataFormat.Binary));
-        }
 
         /// <summary>
         ///     Must be called to build equipment slots
