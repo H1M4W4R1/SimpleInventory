@@ -8,6 +8,7 @@ using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Equipment;
 using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 using UnityEngine.Assertions;
 

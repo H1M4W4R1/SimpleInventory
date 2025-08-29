@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Sirenix.Utilities;
 using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 using UnityEngine.Assertions;
 

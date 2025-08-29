@@ -2,6 +2,7 @@
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Items.Abstract;
 
 namespace Systems.SimpleInventory.Data.Context
 {

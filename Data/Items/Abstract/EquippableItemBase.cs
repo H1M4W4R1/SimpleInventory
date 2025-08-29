@@ -1,6 +1,6 @@
 ﻿using Systems.SimpleInventory.Data.Context;
 
-namespace Systems.SimpleInventory.Data.Items
+namespace Systems.SimpleInventory.Data.Items.Abstract
 {
     /// <summary>
     ///     Item that can be equipped.

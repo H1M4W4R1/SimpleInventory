@@ -6,7 +6,7 @@ using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
 
-namespace Systems.SimpleInventory.Data.Items
+namespace Systems.SimpleInventory.Data.Items.Abstract
 {
     /// <summary>
     ///     Basic class for inventory items - should be used as base for all inventory items

@@ -2,6 +2,7 @@
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Components.Items.Pickup

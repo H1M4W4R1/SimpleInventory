@@ -1,6 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Systems.SimpleInventory.Data.Items;
+using Systems.SimpleInventory.Data.Items.Abstract;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Data.Inventory
@@ -13,6 +14,8 @@ namespace Systems.SimpleInventory.Data.Inventory
     {
         /// <summary>
         ///     Item in the slot
+        ///     TODO: Rework as InventoryItem instead of ItemBase to support
+        ///           custom item properties and statistics
         /// </summary>
         [field: SerializeReference] public ItemBase Item { get; internal set; }
         
