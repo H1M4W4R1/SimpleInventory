@@ -36,7 +36,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         ///     Picks up item
         /// </summary>
         /// <param name="toInventory">Inventory to pick up item to</param>
-        public void Pickup([NotNull] InventoryBase toInventory)
+        public virtual void Pickup([NotNull] InventoryBase toInventory)
         {
             // Perform
             int amountLeft = toInventory.TryAdd(Item, Amount);

@@ -5,7 +5,8 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
     /// <summary>
     ///     Pick-up item that destroys itself after all items are picked up
     /// </summary>
-    public sealed class PickupItemWithDestroy : PickupItem
+    // ReSharper disable once ClassCanBeSealed.Global
+    public class PickupItemWithDestroy : PickupItem
     {
         protected internal override void OnPickupAttemptComplete(in PickupItemContext context)
         {
