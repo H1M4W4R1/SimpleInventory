@@ -235,7 +235,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Take item from inventory
             if (context.removeFromInventory && context.slot.inventory is not null)
-                context.slot.inventory.ClearSlot(context.slot.slotIndex);
+                context.slot.inventory.Take(context.slot.slotIndex, InventoryActionSource.External);
 
             // Call events
             equippableItemRef.OnEquip(context);

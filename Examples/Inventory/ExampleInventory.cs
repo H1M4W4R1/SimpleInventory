@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
+using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Examples.Equipment;
 using Systems.SimpleInventory.Examples.Items.Armour;
 using Systems.SimpleInventory.Examples.Items.Armour.Abstract;
@@ -99,6 +100,30 @@ namespace Systems.SimpleInventory.Examples.Inventory
             sb.AppendLine($"Boots: {(boots ? boots.name : "None")}");
             Debug.Log(sb.ToString());
 
+        }
+
+        protected override void OnItemAdded(in AddItemContext context)
+        {
+            base.OnItemAdded(in context);
+            Debug.Log($"Item added: {context.item.Item.name}");
+        }
+
+        protected override void OnItemAddFailed(in AddItemContext context)
+        {
+            base.OnItemAddFailed(in context);
+            Debug.Log($"Item add failed: {context.item.Item.name}");
+        }
+
+        protected override void OnItemTaken(in TakeItemContext context)
+        {
+            base.OnItemTaken(in context);
+            Debug.Log($"Item taken: {context.item.name}");
+        }
+
+        protected override void OnItemTakeFailed(in TakeItemContext context)
+        {
+            base.OnItemTakeFailed(in context);
+            Debug.Log($"Item take failed: {context.item.name}");
         }
     }
 }

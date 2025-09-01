@@ -866,6 +866,37 @@ namespace Systems.SimpleInventory.Components.Inventory
         }
 
         /// <summary>
+        ///     Method to take all items from a specific slot
+        /// </summary>
+        /// <param name="slotSlotIndex">Slot index to take items from</param>
+        /// <param name="actionSource">Source of action</param>
+        /// <returns>0</returns>
+        public int Take(int slotSlotIndex, InventoryActionSource actionSource)
+        {
+            // Get slot
+            InventorySlot slot = GetSlotAt(slotSlotIndex);
+
+            // Void items are always removed
+            if (slot.Item is null) return 0;
+
+            // Amount of item in slot
+            int amountTaken = slot.Amount;
+            WorldItem cachedItem = slot.Item;
+            
+            // Create context
+            TakeItemContext context = new(slot.Item, this, amountTaken);
+
+            // Clear slot as we have taken the item
+            ClearSlot(slot);
+            
+            // Call events 
+            if (actionSource == InventoryActionSource.Internal) return amountTaken;
+            OnItemTaken(context);
+            cachedItem.Item.OnTakeFromInventory(context);
+            return 0;
+        }
+        
+        /// <summary>
         ///     Take a specific item from inventory
         /// </summary>
         /// <param name="item">Item to take</param>
@@ -1035,12 +1066,12 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Clears specified slot
         /// </summary>
         /// <param name="slotIndex">Index of slot to clear</param>
-        internal void ClearSlot(int slotIndex) => ClearSlot(GetSlotAt(slotIndex));
+        protected void ClearSlot(int slotIndex) => ClearSlot(GetSlotAt(slotIndex));
 
         /// <summary>
         ///     Clears specified slot
         /// </summary>
-        internal void ClearSlot([NotNull] InventorySlot slot)
+        protected void ClearSlot([NotNull] InventorySlot slot)
         {
             slot.Item = null;
             slot.Amount = 0;
@@ -1233,5 +1264,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             item.Item.SpawnPickup<TPickupItemType>(item, amount, position, rotation, parent);
 
 #endregion
+
+     
     }
 }
