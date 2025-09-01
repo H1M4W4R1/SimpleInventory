@@ -10,8 +10,6 @@ using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Base;
 using Systems.SimpleInventory.Data.Items.Data;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -20,7 +18,6 @@ namespace Systems.SimpleInventory.Components.Inventory
 {
     /// <summary>
     ///     Represents inventory that can contain items
-    ///     TODO: option to silence events?
     /// </summary>
     public abstract class InventoryBase : MonoBehaviour
     {
@@ -50,7 +47,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         [CanBeNull] public WorldItem GetItemAt(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return null;
-            return _inventoryData[slotIndex].Item;
+            return GetSlotAt(slotIndex).Item;
         }
 
         /// <summary>
@@ -64,7 +61,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Loop through all items
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                WorldItem itemData = _inventoryData[i].Item;
+                WorldItem itemData = GetSlotAt(i).Item;
                 if (itemData is null) continue;
 
                 // Check if item is of desired type and return reference
@@ -85,7 +82,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             List<InventoryItemReference> items = new();
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                WorldItem itemData = _inventoryData[i].Item;
+                WorldItem itemData = GetSlotAt(i).Item;
                 if (itemData is null) continue;
 
                 // Check if item is of desired type and add to cache
@@ -93,6 +90,13 @@ namespace Systems.SimpleInventory.Components.Inventory
             }
 
             return items;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] [NotNull]
+        protected internal InventorySlot GetSlotAt(int sourceSlotIndex)
+        {
+            Assert.IsTrue(sourceSlotIndex >= 0 && sourceSlotIndex < _inventoryData.Count);
+            return _inventoryData[sourceSlotIndex];
         }
 
 #endregion
@@ -117,7 +121,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return EquipItemResult.InvalidSlot;
 
             // Get item at slot
-            WorldItem item = _inventoryData[slotIndex].Item;
+            WorldItem item = GetSlotAt(slotIndex).Item;
             if (item is null) return EquipItemResult.InvalidItem;
 
             // Check if item is equippable
@@ -168,7 +172,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UnequipItemResult.InvalidSlot;
 
             // Get item
-            WorldItem item = _inventoryData[slotIndex].Item;
+            WorldItem item = GetSlotAt(slotIndex).Item;
             if (item is null) return UnequipItemResult.InvalidItem;
 
             // Create context
@@ -256,7 +260,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UseItemResult.InvalidItem;
 
             // Get item
-            WorldItem item = _inventoryData[slotIndex].Item;
+            WorldItem item = GetSlotAt(slotIndex).Item;
 
             // Check if item is equippable
             if (item is null) return UseItemResult.InvalidItem;
@@ -328,7 +332,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
 #endregion
 
-#region Item transfer
+#region Item dropping
 
         /// <summary>
         ///     Drops item as pickup object
@@ -389,170 +393,164 @@ namespace Systems.SimpleInventory.Components.Inventory
             return DropItemAs<TPickupItemType>(itemReference, amount);
         }
 
+#endregion
+
+#region Item transfer
+
         /// <summary>
         ///     Transfers specified amount of items from this inventory to another inventory
         /// </summary>
-        /// <param name="item">Item to transfer</param>
         /// <param name="targetInventory">Inventory to transfer item to</param>
-        /// <param name="amount">Amount of items to transfer</param>
+        /// <param name="sourceItem">Item to transfer from this inventory</param>
+        /// <param name="sourceAmount">Amount of items to transfer from this inventory</param>
+        /// <param name="targetItem">Item to transfer to this inventory</param>
+        /// <param name="targetAmount">Amount of items to transfer to this inventory</param>
         /// <returns>True if transfer was successful</returns>
         public bool TransferItems(
-            [NotNull] WorldItem item,
             [NotNull] InventoryBase targetInventory,
-            int amount)
+            [NotNull] WorldItem sourceItem,
+            int sourceAmount,
+            [CanBeNull] WorldItem targetItem = null,
+            int targetAmount = 0)
         {
             // Create context
-            // TODO: Rework to be similar to take item?
-            TransferItemContext context = new(this, targetInventory, item, amount);
+            TransferItemContext context = new(this, targetInventory, sourceItem, targetItem,
+                sourceAmount, targetAmount);
 
             // Check if transfer is allowed
-            if (!CanTransferItem(context) || !item.Item.CanTransfer(context)) return false;
-
-            // Check if this inventory has enough items
-            if (!Has(item, amount)) return false;
-
-            // Check if other inventory has enough space
-            if (!targetInventory.CanStore(item, amount)) return false;
+            if (!CanTransferItem(context) || !sourceItem.Item.CanTransfer(context))
+            {
+                OnItemTransferFailed(context);
+                sourceItem.Item.OnTransferFailed(context);
+                return false;
+            }
 
             // Transfer items by taking and adding to other inventory
-            bool takeResult = TryTake(item, amount);
+            bool takeResult = TryTake(sourceItem, sourceAmount);
+            if (targetItem != null) takeResult |= targetInventory.TryTake(targetItem, targetAmount);
             Assert.IsTrue(takeResult, "Failed to take items from inventory, this should never happen");
 
-            int addResult = targetInventory.TryAdd(item, amount);
-            Assert.IsTrue(addResult == amount, "Failed to add items to inventory, this should never happen");
+            int addResult = targetInventory.TryAdd(sourceItem, sourceAmount);
+            if (targetItem != null) addResult |= TryAdd(targetItem, targetAmount);
+            Assert.IsTrue(addResult == sourceAmount, "Failed to add items to inventory, this should never happen");
 
             // Call events
-            item.Item.OnTransfer(context);
+            OnItemTransferred(context);
+            targetInventory.OnItemTransferred(context);
+            sourceItem.Item.OnTransfer(context);
             return true;
         }
 
         /// <summary>
-        ///     Transfers an item from this inventory to another inventory
+        ///     Transfers an item from this inventory to another or same inventory
         /// </summary>
         /// <param name="sourceSlot">Slot index of item to transfer</param>
         /// <param name="targetInventory">Inventory to transfer item to</param>
         /// <param name="targetSlot">Slot index of item to transfer to</param>
-        /// <param name="allowPartialTransfer">
-        ///     If true items will be stacked together when slot is already occupied by same item
-        /// </param>
-        /// <param name="swapIfOccupied">
-        ///     If true items will be swapped if target slot is occupied by different item
-        /// </param>
+        /// <param name="transferFlags">Transfer flags</param>
         /// <returns>True if transfer was successful</returns>
-        public bool TransferItem(
+        public virtual bool TransferItem(
             int sourceSlot,
             [NotNull] InventoryBase targetInventory,
             int targetSlot,
-            bool allowPartialTransfer = true,
-            bool swapIfOccupied = true)
+            ItemTransferFlags transferFlags = ItemTransferFlags.None)
         {
             // Ensure slots are valid
             if (sourceSlot < 0 || sourceSlot >= _inventoryData.Count) return false;
             if (targetSlot < 0 || targetSlot >= targetInventory._inventoryData.Count) return false;
 
             // Get slots
-            InventorySlot sourceSlotData = _inventoryData[sourceSlot];
-            InventorySlot targetSlotData = targetInventory._inventoryData[targetSlot];
+            InventorySlot sourceSlotData = GetSlotAt(sourceSlot);
+            InventorySlot targetSlotData = targetInventory.GetSlotAt(targetSlot);
 
-            // Check if original item is null
-            if (sourceSlotData.Item is null) return false;
+            // Create transfer context
+            TransferItemContext itemTransferContext = new(
+                this, sourceSlot, targetInventory, targetSlot, sourceSlotData.Item,
+                targetSlotData.Item, sourceSlotData.Amount, targetSlotData.Amount, transferFlags);
 
-            // Handle target slot having same item
+            // Check transfer allowance for both items and for both inventories
+            if (!CanTransferItem(itemTransferContext) ||
+                !targetInventory.CanTransferItem(itemTransferContext) ||
+                !(sourceSlotData.Item?.Item.CanTransfer(itemTransferContext) ?? true) ||
+                !(targetSlotData.Item?.Item.CanTransfer(itemTransferContext) ?? true))
+            {
+                OnItemTransferFailed(itemTransferContext);
+                targetInventory.OnItemTransferFailed(itemTransferContext);
+
+                sourceSlotData.Item?.Item.OnTransferFailed(itemTransferContext);
+                targetSlotData.Item?.Item.OnTransferFailed(itemTransferContext);
+                return false;
+            }
+
+            // Handle transfers correctly
             if (Equals(sourceSlotData.Item, targetSlotData.Item))
-            {
-                // Create context - one-way transfer
-                TransferItemContext sourceTransferContext = new(this, targetInventory,
-                    sourceSlotData.Item,
-                    sourceSlotData.Amount);
-
-                // Check if transfer is allowed
-                if (!CanTransferItem(sourceTransferContext)) return false;
-                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
-
-                // Handle stack transfer
-                int spaceLeft = targetSlotData.SpaceLeft;
-                if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
-
-                // Transfer stack (partially too) and complete
-                int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
-                targetSlotData.Amount += amountToTransfer;
-                sourceSlotData.Amount -= amountToTransfer;
-
-                // We should ensure that source slot is cleared when it reaches zero
-                if (sourceSlotData.Amount == 0) ClearSlot(sourceSlot);
-
-                // Call events
-                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
-                return true;
-            }
-
-            // Handle target slot being occupied (different item ID)
-            if (!ReferenceEquals(targetSlotData.Item, null))
-            {
-                // Handle swap
-                if (!swapIfOccupied) return false;
-
-                // Create transfer context - two-way transfer
-                TransferItemContext sourceTransferContext = new(this, targetInventory,
-                    sourceSlotData.Item,
-                    sourceSlotData.Amount);
-                TransferItemContext targetTransferContext = new(targetInventory, this,
-                    targetSlotData.Item,
-                    targetSlotData.Amount);
-
-                // Check if transfers are allowed
-                if (!CanTransferItem(sourceTransferContext)) return false;
-                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
-
-                if (!CanTransferItem(targetTransferContext)) return false;
-                if (!targetSlotData.Item.Item.CanTransfer(targetTransferContext)) return false;
-
-                // Swap items
-                InventorySlot.Swap(sourceSlotData, targetSlotData);
-
-                // Call events
-                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
-                targetTransferContext.item.Item.OnTransfer(targetTransferContext);
-            }
+                HandleSameItemTransfer(sourceSlotData, targetSlotData,
+                    ref itemTransferContext, transferFlags);
             else
-            {
-                // Create context - one-way transfer
-                TransferItemContext sourceTransferContext = new(this, targetInventory,
-                    sourceSlotData.Item,
-                    sourceSlotData.Amount);
+                HandleItemSwap(sourceSlotData, targetSlotData);
 
-                // Check if transfer is allowed
-                if (!CanTransferItem(sourceTransferContext)) return false;
-                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
 
-                // Handle target slot being empty
-                targetSlotData.Item = sourceSlotData.Item;
-                targetSlotData.Amount = sourceSlotData.Amount;
-                sourceSlotData.Item = null;
-                sourceSlotData.Amount = 0;
-
-                // Call events
-                sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
-            }
-
+            // Call events
+            OnItemTransferred(itemTransferContext);
+            targetInventory.OnItemTransferred(itemTransferContext);
+            sourceSlotData.Item?.Item.OnTransfer(itemTransferContext);
+            targetSlotData.Item?.Item.OnTransfer(itemTransferContext);
             return true;
         }
 
-        /// <summary>
-        ///     Swaps items in inventory, does not stack items.
-        ///     For stack transfer use <see cref="TransferItem(int,Systems.SimpleInventory.Components.Inventory.InventoryBase,int,bool,bool)"/> with same inventory.
-        /// </summary>
-        /// <param name="fromSlot">Index of first slot</param>
-        /// <param name="toSlot">Index of second slot</param>
-        /// <param name="allowPartialTransfer">Partial item transfer may be performed</param>
-        /// <param name="swapIfOccupied">Items be swapped if occupied</param>
-        /// <returns>True if swap was successful, false otherwise</returns>
-        public bool TransferItem(
-            int fromSlot,
-            int toSlot,
-            bool allowPartialTransfer = true,
-            bool swapIfOccupied = true)
-            => TransferItem(fromSlot, this, toSlot, allowPartialTransfer, swapIfOccupied);
+        private void HandleSameItemTransfer(
+            [NotNull] InventorySlot sourceSlotData,
+            [NotNull] InventorySlot targetSlotData,
+            ref TransferItemContext itemTransferContext,
+            ItemTransferFlags transferFlags)
+        {
+            // Handle item transfer properly
+            if ((transferFlags & ItemTransferFlags.SwapIfOccupiedBySame) != 0)
+                HandleSameItemSwap(sourceSlotData, targetSlotData, transferFlags);
+            else
+                HandleSameItemCombine(sourceSlotData, targetSlotData, ref itemTransferContext);
+        }
+
+        private void HandleSameItemCombine(
+            [NotNull] InventorySlot sourceSlotData,
+            [NotNull] InventorySlot targetSlotData,
+            ref TransferItemContext itemTransferContext)
+        {
+            // Compute space left for target slot
+            int spaceLeft = targetSlotData.SpaceLeft;
+
+            // Transfer stack (partially too) and complete
+            int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
+            targetSlotData.Amount += amountToTransfer;
+            sourceSlotData.Amount -= amountToTransfer;
+
+            // Update transfer amounts for combining
+            // source is set to amount that was taken
+            // target is zero, because nothing was taken from target
+            itemTransferContext.sourceAmount = amountToTransfer;
+            itemTransferContext.targetAmount = 0;
+
+            // We should ensure that source slot is cleared when it reaches zero
+            if (sourceSlotData.Amount == 0) ClearSlot(sourceSlotData);
+        }
+
+        private void HandleSameItemSwap(
+            [NotNull] InventorySlot sourceSlotData,
+            [NotNull] InventorySlot targetSlotData,
+            ItemTransferFlags transferFlags)
+        {
+            Assert.IsTrue((transferFlags & ItemTransferFlags.SwapIfOccupiedBySame) != 0,
+                "ItemTransferFlags.SwapIfOccupiedBySame must be set to use HandleSameItemSwap");
+            HandleItemSwap(sourceSlotData, targetSlotData);
+        }
+
+        private void HandleItemSwap(
+            [NotNull] InventorySlot sourceSlotData,
+            [NotNull] InventorySlot targetSlotData)
+        {
+            // Swap items
+            InventorySlot.Swap(sourceSlotData, targetSlotData);
+        }
 
 #endregion
 
@@ -564,21 +562,24 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="itemBase">Item to check</param>
         /// <param name="amount">Amount that may be stored</param>
         /// <returns>True if inventory can store specified amount of items, false otherwise</returns>
-        public bool CanStore([NotNull] WorldItem itemBase, int amount) =>
+        public bool CanStore([CanBeNull] WorldItem itemBase, int amount) =>
             GetFreeSpaceFor(itemBase) >= amount;
 
         /// <summary>
         ///     Gets free space for item
         /// </summary>
         /// <param name="itemBase">Item to get free space for</param>
-        /// <returns>Free space for item</returns>
-        public int GetFreeSpaceFor([NotNull] WorldItem itemBase)
+        /// <returns>Free space for item, or max int if item is null</returns>
+        public int GetFreeSpaceFor([CanBeNull] WorldItem itemBase)
         {
+            // If item is null, return max int
+            if (itemBase is null) return int.MaxValue;
+            
             // Count free space for item
             int freeSpace = 0;
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                InventorySlot slot = _inventoryData[i];
+                InventorySlot slot = GetSlotAt(i);
                 if (ReferenceEquals(slot.Item, null))
                     freeSpace += itemBase.MaxStack;
                 else if (Equals(slot.Item, itemBase)) freeSpace += slot.SpaceLeft;
@@ -652,8 +653,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to add</param>
         /// <param name="amountToAdd">Amount of item to add</param>
         /// <returns>Amount of items that could not be added</returns>
-        public int TryAdd([NotNull] WorldItem item, int amountToAdd)
+        public int TryAdd([CanBeNull] WorldItem item, int amountToAdd)
         {
+            // Void items are always added
+            if (item is null) return 0;
+            
             // Prevent execution if inventory is not created
             if (_inventoryData is null) return amountToAdd;
 
@@ -678,15 +682,18 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to add</param>
         /// <param name="amountToAdd">Amount of items to add</param>
         /// <returns>Amount of items that could not be added</returns>
-        protected virtual int Add([NotNull] WorldItem item, int amountToAdd)
+        protected virtual int Add([CanBeNull] WorldItem item, int amountToAdd)
         {
+            // Void items are always added
+            if (item is null) return 0;
+            
             int originalAmount = amountToAdd;
 
             // Iterate through inventory slots
             // and attempt to add items if already occupied by same item id
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                InventorySlot slot = _inventoryData[i];
+                InventorySlot slot = GetSlotAt(i);
 
                 // Check if slot is occupied by same item
                 if (!Equals(slot.Item, item)) continue;
@@ -706,7 +713,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Handle empty slots
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                InventorySlot slot = _inventoryData[i];
+                InventorySlot slot = GetSlotAt(i);
 
                 // Check if slot is empty
                 if (!ReferenceEquals(slot.Item, null)) continue;
@@ -738,8 +745,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="item">Item to add</param>
         /// <param name="amountToAdd">Amount of items to add</param>
-        public void TryAddOrDrop([NotNull] WorldItem item, int amountToAdd)
+        public void TryAddOrDrop([CanBeNull] WorldItem item, int amountToAdd)
         {
+            // Skip if item is null
+            if (item is null) return;
+            
             int remaining = TryAdd(item, amountToAdd);
             if (remaining == 0) return;
 
@@ -752,8 +762,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to remove</param>
         /// <param name="amountToTake">Amount of item to remove</param>
         /// <returns>True if items were removed, false otherwise</returns>
-        public bool TryTake([NotNull] ItemBase item, int amountToTake)
+        public bool TryTake([CanBeNull] ItemBase item, int amountToTake)
         {
+            // Void items are always removed
+            if (item is null) return true;
+            
             // Prevent execution if inventory is not created
             if (_inventoryData is null) return false;
 
@@ -783,8 +796,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to remove</param>
         /// <param name="amountToTake">Amount of item to remove</param>
         /// <returns>True if items were removed, false otherwise</returns>
-        public bool TryTake([NotNull] WorldItem item, int amountToTake)
+        public bool TryTake([CanBeNull] WorldItem item, int amountToTake)
         {
+            // Void items are always removed
+            if (item is null) return true;
+            
             // Prevent execution if inventory is not created
             if (_inventoryData is null) return false;
 
@@ -814,8 +830,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to take</param>
         /// <param name="amountToTake">Amount to take</param>
         /// <returns>True if items were taken, false otherwise</returns>
-        protected virtual int Take([NotNull] ItemBase item, int amountToTake)
+        protected virtual int Take([CanBeNull] ItemBase item, int amountToTake)
         {
+            // Void items are always removed
+            if (item is null) return 0;
+            
             // Update context with real taken amount
             int amountLeft = Take<ItemBase>(item, amountToTake);
 
@@ -833,8 +852,11 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to take</param>
         /// <param name="amountToTake">Amount of items to take</param>
         /// <returns>Amount of items left to take</returns>
-        protected virtual int Take([NotNull] WorldItem item, int amountToTake)
+        protected virtual int Take([CanBeNull] WorldItem item, int amountToTake)
         {
+            // Void items are always removed
+            if (item is null) return 0;
+            
             // Update context with real taken amount
             int amountLeft = Take<WorldItem>(item, amountToTake);
 
@@ -855,7 +877,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             for (int i = 0; i < _inventoryData.Count; i++)
             {
                 // Acquire data
-                InventorySlot slot = _inventoryData[i];
+                InventorySlot slot = GetSlotAt(i);
                 WorldItem itemData = slot.Item;
                 if (itemData is null) continue;
 
@@ -890,7 +912,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to check</param>
         /// <param name="amount">Amount of item to expect</param>
         /// <returns>True if inventory has enough items, false otherwise</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([NotNull] WorldItem item, int amount)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([CanBeNull] WorldItem item, int amount)
             => Count(item) >= amount;
 
         /// <summary>
@@ -899,21 +921,24 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to check</param>
         /// <param name="amount">Amount of item to expect</param>
         /// <returns>True if inventory has enough items, false otherwise</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([NotNull] ItemBase item, int amount)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool Has([CanBeNull] ItemBase item, int amount)
             => Count(item) >= amount;
 
         /// <summary>
         ///     Counts items in inventory
         /// </summary>
         /// <param name="item">Item to count</param>
-        /// <returns>Count of items</returns>
-        public int Count([NotNull] WorldItem item)
+        /// <returns>Count of items or 0 if item null</returns>
+        public int Count([CanBeNull] WorldItem item)
         {
+            if (item is null) return 0;
+            
             int totalItemCount = 0;
 
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                if (Equals(_inventoryData[i].Item, item)) totalItemCount += _inventoryData[i].Amount;
+                InventorySlot slot = GetSlotAt(i);
+                if (Equals(slot.Item, item)) totalItemCount += slot.Amount;
             }
 
             return totalItemCount;
@@ -923,29 +948,54 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Counts items in inventory
         /// </summary>
         /// <param name="item">Item to count</param>
-        /// <returns>Count of items</returns>
-        public int Count([NotNull] ItemBase item)
+        /// <returns>Count of items or 0 if item null</returns>
+        public int Count([CanBeNull] ItemBase item)
         {
+            if (item is null) return 0;
+            
             int totalItemCount = 0;
 
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                WorldItem itemData = _inventoryData[i].Item;
+                InventorySlot slot = GetSlotAt(i);
+
+                WorldItem itemData = slot.Item;
                 if (itemData is null) continue;
 
-                if (ReferenceEquals(itemData.Item, item)) totalItemCount += _inventoryData[i].Amount;
+                if (ReferenceEquals(itemData.Item, item)) totalItemCount += slot.Amount;
             }
 
             return totalItemCount;
         }
 
         /// <summary>
+        ///     Gets free space at specified slot
+        /// </summary>
+        public int GetFreeSpaceAt(int slotIndex)
+        {
+            Assert.IsTrue(slotIndex >= 0 && slotIndex < _inventoryData.Count,
+                "Invalid slot index");
+            return GetFreeSpaceAt(GetSlotAt(slotIndex));
+        }
+
+        /// <summary>
+        ///     Gets free space at specified slot
+        /// </summary>
+        public int GetFreeSpaceAt([NotNull] InventorySlot slot) => slot.SpaceLeft;
+
+        /// <summary>
         ///     Clears specified slot
         /// </summary>
         /// <param name="slotIndex">Index of slot to clear</param>
-        internal void ClearSlot(int slotIndex)
+        internal void ClearSlot(int slotIndex) => ClearSlot(GetSlotAt(slotIndex));
+
+        /// <summary>
+        ///     Clears specified slot
+        /// </summary>
+        internal void ClearSlot([NotNull] InventorySlot slot)
         {
-            _inventoryData[slotIndex] = new InventorySlot();
+            slot.Item = null;
+            slot.Amount = 0;
         }
 
 #endregion
@@ -972,7 +1022,49 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be transferred
         /// </summary>
-        protected virtual bool CanTransferItem(TransferItemContext context) => true;
+        protected virtual bool CanTransferItem(TransferItemContext context)
+        {
+            // Handle separate case for stupid multi-slot transfers
+            if (context.IsMultiSlotTransfer)
+            {
+                // We're swap-transferring items between inventories
+                if (!context.sourceInventory.Has(context.sourceItem, context.sourceAmount)) return false;
+                if (!context.sourceInventory.CanStore(context.targetItem, context.targetAmount)) return false;
+
+                if (!context.targetInventory.Has(context.targetItem, context.targetAmount)) return false;
+                if (!context.targetInventory.CanStore(context.sourceItem, context.sourceAmount)) return false;
+                return true;
+            }
+            
+            // If any slot is empty we can simply swap them, if both are empty then too
+            if (context.sourceItem is null || context.targetItem is null) return true;
+
+            // Same-item check should be done only on source inventory side
+            // to improve performance
+            if (!context.IsSource(this)) return true;
+
+            // Check if same item, if not then we can easily swap those items unless
+            // some other logic is overriding this behaviour.
+            if (!Equals(context.sourceItem.Item, context.targetItem.Item)) return true;
+            
+            // Check if items are designed to be swapped, if so then we can easily
+            // perform the swap unless some other logic is overriding this behaviour.
+            if((context.transferFlags & ItemTransferFlags.SwapIfOccupiedBySame) != 0)
+                return true;
+            
+            // Compute sizes
+            int sourceAmount = context.sourceAmount;
+            int spaceLeft = context.TargetSpaceLeft;
+            
+            // Check if enough space for transfer or partial transfer is allowed
+            // if no then we can't transfer
+            if (spaceLeft < sourceAmount &&
+                (context.transferFlags & ItemTransferFlags.AllowPartialTransfer) == 0)
+                return false;
+
+            // We can combine two items of same type
+            return true;
+        }
 
 #endregion
 
@@ -1054,6 +1146,20 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Called when item take fails
         /// </summary>
         protected virtual void OnItemTakeFailed(in TakeItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Executed when item is transferred from this inventory
+        /// </summary>
+        protected virtual void OnItemTransferred(in TransferItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Executed when item transfer from this inventory fails
+        /// </summary>
+        protected virtual void OnItemTransferFailed(in TransferItemContext context)
         {
         }
 
