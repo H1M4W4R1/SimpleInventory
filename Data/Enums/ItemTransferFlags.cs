@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Systems.SimpleInventory.Data
+namespace Systems.SimpleInventory.Data.Enums
 {
     [Flags]
     public enum ItemTransferFlags

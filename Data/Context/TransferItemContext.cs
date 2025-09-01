@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Inventory;
+using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
 
 namespace Systems.SimpleInventory.Data.Context
