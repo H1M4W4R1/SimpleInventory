@@ -761,7 +761,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (amountToTake <= 0) return false;
 
             // Create context
-            TakeItemContext context = new(null, item, this, amountToTake);
+            TakeItemContext context = new(item, this, amountToTake);
 
             // Check if item can be taken
             if (!item.CanTake(context) || !CanTakeItem(context))
@@ -792,8 +792,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (amountToTake <= 0) return false;
 
             // Create context
-            TakeItemContext context = new(item, item.Item, this, amountToTake);
-            
+            TakeItemContext context = new(item, this, amountToTake);
+
             // Check if item can be taken
             if (!item.Item.CanTake(context) || !CanTakeItem(context))
             {
@@ -801,7 +801,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 item.Item.OnTakeFromInventoryFailed(context);
                 return false;
             }
-            
+
             // Take item and verify
             int amountLeft = Take(item, amountToTake);
             Assert.AreEqual(amountLeft, 0, "Failed to take items from inventory, this should never happen");
@@ -818,9 +818,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             // Update context with real taken amount
             int amountLeft = Take<ItemBase>(item, amountToTake);
-            
+
             // Create context
-            TakeItemContext context = new(null, item, this, amountToTake - amountLeft);
+            TakeItemContext context = new(item, this, amountToTake - amountLeft);
 
             OnItemTaken(context);
             item.OnTakeFromInventory(context);
@@ -839,7 +839,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             int amountLeft = Take<WorldItem>(item, amountToTake);
 
             // Create context
-            TakeItemContext context = new(item, item.Item, this, amountToTake - amountLeft);
+            TakeItemContext context = new(item, this, amountToTake - amountLeft);
 
             OnItemTaken(context);
             item.Item.OnTakeFromInventory(context);
@@ -955,7 +955,8 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be added to inventory
         /// </summary>
-        protected virtual bool CanAddItem(AddItemContext context) => GetFreeSpaceFor(context.item) >= context.amount;
+        protected virtual bool CanAddItem(AddItemContext context)
+            => GetFreeSpaceFor(context.item) >= context.amount;
 
         /// <summary>
         ///     Checks if item can be taken from inventory
@@ -965,7 +966,8 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be dropped from inventory
         /// </summary>
-        protected virtual bool CanDropItem(DropItemContext context) => true;
+        protected virtual bool CanDropItem(DropItemContext context) => CanTakeItem(new TakeItemContext(
+            context.item, this, context.amount));
 
         /// <summary>
         ///     Checks if item can be transferred
