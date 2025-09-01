@@ -20,6 +20,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 {
     /// <summary>
     ///     Represents inventory that can contain items
+    ///     TODO: Add using checks to usable and equippable items for inventory-level validation
     /// </summary>
     public abstract class InventoryBase : MonoBehaviour
     {
@@ -140,7 +141,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         ///     Do not use if item is already in inventory (will duplicate items).
         ///     In such case use <see cref="UnequipItem(int, EquipmentBase)"/>
         /// </remarks>
-        public UnequipItemResult UnequipItem([NotNull] WorldItem item, [NotNull] EquipmentBase fromEquipment,
+        public UnequipItemResult UnequipItem(
+            [NotNull] WorldItem item,
+            [NotNull] EquipmentBase fromEquipment,
             bool addToInventory = true)
         {
             // Create context
@@ -167,7 +170,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Get item
             WorldItem item = _inventoryData[slotIndex].Item;
             if (item is null) return UnequipItemResult.InvalidItem;
-     
+
             // Create context
             // We don't add to inventory as it's already here
             UnequipItemContext context = new(this, fromEquipment, item, addToInventory: false);
@@ -233,7 +236,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Get best item
             InventoryItemReference? bestItemReference = GetBestItem<TItemType>();
             if (bestItemReference is null) return EquipItemResult.InvalidItem;
-            
+
             // Use best item
             return EquipItem(bestItemReference.Value.slotIndex, toEquipment, removeFromInventory);
         }
@@ -297,10 +300,10 @@ namespace Systems.SimpleInventory.Components.Inventory
                 int comparison = items[i].item.CompareTo(bestItemReference.item);
                 if (comparison > 0) bestItemReference = items[i];
             }
-            
+
             return bestItemReference;
         }
-        
+
         /// <summary>
         ///     Uses best item of specified type
         /// </summary>
@@ -312,7 +315,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Get best item
             InventoryItemReference? bestItemReference = GetBestItem<TItemType>();
             if (bestItemReference is null) return UseItemResult.InvalidItem;
-            
+
             // Use best item
             return UseItem(bestItemReference.Value.slotIndex);
         }
@@ -333,15 +336,17 @@ namespace Systems.SimpleInventory.Components.Inventory
             int amount)
             where TPickupItemType : PickupItem, new()
         {
+            // Create context
+            DropItemContext context = new(this, item, amount);
+
+            // TODO: ItemBase.CanDrop, InventoryBase.CanDrop
+
             // Try to take required items
             if (!TryTake(item, amount)) return false;
 
             // Spawn object
             SpawnItemObject<TPickupItemType>(item, amount, InventoryDropPosition.position,
                 InventoryDropPosition.rotation, InventoryDropPosition);
-
-            // Create context
-            DropItemContext context = new(this, item, amount);
 
             // Call events
             OnItemDropped(context);
@@ -368,22 +373,9 @@ namespace Systems.SimpleInventory.Components.Inventory
             WorldItem itemReference = GetItemAt(slotIndex);
             if (itemReference is null) return false;
 
-            // Spawn object
-            SpawnItemObject<TPickupItemType>(itemReference, amount, InventoryDropPosition.position,
-                InventoryDropPosition.rotation, InventoryDropPosition);
-
-            // Clear slot data
-            ClearSlot(slotIndex);
-
-            // Create context
-            DropItemContext context = new(this, itemReference, amount);
-
-            // Call events
-            OnItemDropped(context);
-            itemReference.Item.OnItemDropped(context);
-            return true;
+            // Fallback to original implementation
+            return DropItemAs<TPickupItemType>(itemReference, amount);
         }
-
 
         /// <summary>
         ///     Transfers specified amount of items from this inventory to another inventory
@@ -397,11 +389,20 @@ namespace Systems.SimpleInventory.Components.Inventory
             [NotNull] InventoryBase targetInventory,
             int amount)
         {
+            // Create context
+            TransferItemContext context = new(this, targetInventory, itemBase, amount);
+
+            // TODO: ItemBase.CanTransfer, InventoryBase.CanTransfer
+            //       remember to use inventory comparison when moving code out
+            //       as in case of same inventory this may be false
+
             // Check if this inventory has enough items
             if (!Has(itemBase, amount)) return false;
 
             // Check if other inventory has enough space
             if (!targetInventory.CanStore(itemBase, amount)) return false;
+
+            // TODO: Virtualize transfer method
 
             // Transfer items by taking and adding to other inventory
             bool takeResult = TryTake(itemBase, amount);
@@ -409,9 +410,6 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             int addResult = targetInventory.TryAdd(itemBase, amount);
             Assert.IsTrue(addResult == amount, "Failed to add items to inventory, this should never happen");
-
-            // Create context
-            TransferItemContext context = new(this, targetInventory, itemBase, amount);
 
             // Call events
             itemBase.Item.OnTransfer(context);
@@ -436,36 +434,39 @@ namespace Systems.SimpleInventory.Components.Inventory
             [NotNull] InventoryBase targetInventory,
             int targetSlot,
             bool allowPartialTransfer = true,
-            bool swapIfOccupied = true)
+            bool swapIfOccupied = true) // TODO: Combine properties into flag enum
         {
             // Ensure slots are valid
             if (sourceSlot < 0 || sourceSlot >= _inventoryData.Count) return false;
             if (targetSlot < 0 || targetSlot >= targetInventory._inventoryData.Count) return false;
 
-
             // Get slots
             InventorySlot sourceSlotData = _inventoryData[sourceSlot];
             InventorySlot targetSlotData = targetInventory._inventoryData[targetSlot];
-            
+
             // Check if original item is null
             if (sourceSlotData.Item is null) return false;
 
             // Handle target slot having same item
             if (Equals(sourceSlotData.Item, targetSlotData.Item))
             {
-                // Handle stack transfer
-                int spaceLeft = targetSlotData.SpaceLeft;
-                if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
-
                 // Create context - one-way transfer
                 TransferItemContext sourceTransferContext = new(this, targetInventory,
                     sourceSlotData.Item,
                     sourceSlotData.Amount);
 
+                // TODO: Check if transfer is allowed
+
+                // Handle stack transfer
+                int spaceLeft = targetSlotData.SpaceLeft;
+                if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
+                
                 // Transfer stack (partially too) and complete
                 int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
                 targetSlotData.Amount += amountToTransfer;
                 sourceSlotData.Amount -= amountToTransfer;
+
+                // BUG: Source slot data is not cleared if amount is zero
 
                 // Call events
                 sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
@@ -486,6 +487,8 @@ namespace Systems.SimpleInventory.Components.Inventory
                     targetSlotData.Item,
                     targetSlotData.Amount);
 
+                // TODO: Check if transfers are allowed
+
                 // Swap items
                 InventorySlot.Swap(sourceSlotData, targetSlotData);
 
@@ -499,6 +502,8 @@ namespace Systems.SimpleInventory.Components.Inventory
                 TransferItemContext sourceTransferContext = new(this, targetInventory,
                     sourceSlotData.Item,
                     sourceSlotData.Amount);
+
+                // TODO: Check if transfer is allowed
 
                 // Handle target slot being empty
                 targetSlotData.Item = sourceSlotData.Item;
@@ -515,25 +520,19 @@ namespace Systems.SimpleInventory.Components.Inventory
 
         /// <summary>
         ///     Swaps items in inventory, does not stack items.
-        ///     For stack transfer use <see cref="TransferItem"/> with same inventory.
+        ///     For stack transfer use <see cref="TransferItem(int,Systems.SimpleInventory.Components.Inventory.InventoryBase,int,bool,bool)"/> with same inventory.
         /// </summary>
-        /// <param name="slotIndex1">Index of first slot</param>
-        /// <param name="slotIndex2">Index of second slot</param>
+        /// <param name="fromSlot">Index of first slot</param>
+        /// <param name="toSlot">Index of second slot</param>
+        /// <param name="allowPartialTransfer">Partial item transfer may be performed</param>
+        /// <param name="swapIfOccupied">Items be swapped if occupied</param>
         /// <returns>True if swap was successful, false otherwise</returns>
-        public bool SwapItems(int slotIndex1, int slotIndex2)
-        {
-            // Ensure slots are valid
-            if (slotIndex1 < 0 || slotIndex1 >= _inventoryData.Count) return false;
-            if (slotIndex2 < 0 || slotIndex2 >= _inventoryData.Count) return false;
-
-            // Get slots
-            InventorySlot slot1 = _inventoryData[slotIndex1];
-            InventorySlot slot2 = _inventoryData[slotIndex2];
-
-            // Swap slots
-            InventorySlot.Swap(slot1, slot2);
-            return true;
-        }
+        public bool TransferItem(
+            int fromSlot,
+            int toSlot,
+            bool allowPartialTransfer = true,
+            bool swapIfOccupied = true)
+            => TransferItem(fromSlot, this, toSlot, allowPartialTransfer, swapIfOccupied);
 
 #endregion
 
@@ -639,7 +638,9 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (_inventoryData is null) return amountToAdd;
 
             // Prevent execution if count is invalid
-            if (amountToAdd <= 0) return amountToAdd;
+            if (amountToAdd <= 0) return 0;
+
+            // TODO: ItemBase.CanAdd, InventoryBase.CanAdd
 
             // Iterate through inventory slots
             // and attempt to add items if already occupied by same item id
@@ -711,6 +712,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Prevent execution if count is invalid
             if (amountToTake <= 0) return false;
 
+            // TODO: ItemBase.CanTake, InventoryBase.CanTake
+
             int currentItemCount = 0;
             UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
 
@@ -720,7 +723,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 WorldItem itemData = _inventoryData[i].Item;
                 if (itemData is null) continue;
                 if (!Equals(itemData.Item, item)) continue;
-                
+
                 currentItemCount += _inventoryData[i].Amount;
                 itemSlots.Add(i);
                 if (currentItemCount >= amountToTake) break;
@@ -753,7 +756,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             itemSlots.Dispose();
             return true;
         }
-        
+
         /// <summary>
         ///     Tries to remove items from inventory
         /// </summary>
@@ -767,6 +770,8 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Prevent execution if count is invalid
             if (amountToTake <= 0) return false;
+
+            // TODO: ItemBase.CanTake, InventoryBase.CanTake
 
             int currentItemCount = 0;
             UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
@@ -856,9 +861,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             {
                 WorldItem itemData = _inventoryData[i].Item;
                 if (itemData is null) continue;
-                
-                if (ReferenceEquals(itemData.Item, item))
-                    totalItemCount += _inventoryData[i].Amount;
+
+                if (ReferenceEquals(itemData.Item, item)) totalItemCount += _inventoryData[i].Amount;
             }
 
             return totalItemCount;
