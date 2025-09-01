@@ -61,10 +61,34 @@ namespace Systems.SimpleInventory.Data.Items.Base
         }
 
         /// <summary>
+        /// Checks if item can be added to inventory
+        /// </summary>
+        protected internal bool CanAdd(in AddItemContext context) => true;
+        
+        /// <summary>
+        ///     Checks if item can be taken from inventory
+        /// </summary>
+        protected internal bool CanTake(in TakeItemContext context) => true;
+        
+        /// <summary>
+        ///     Checks if item can be dropped
+        /// </summary>
+        protected internal bool CanDrop(in DropItemContext context) => true;
+        
+        /// <summary>
+        ///     Checks if item can be transferred
+        /// </summary>
+        protected internal bool CanTransfer(in TransferItemContext context) => true;
+        
+#region Events
+
+        
+        
+        /// <summary>
         ///     Event called when item is picked up
         /// </summary>
         /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickedUp(PickupItemContext context)
+        protected internal virtual void OnPickup(in PickupItemContext context)
         {
         }
 
@@ -72,7 +96,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         ///     Event called when item pickup fails
         /// </summary>
         /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickupFailed(PickupItemContext context)
+        protected internal virtual void OnPickupFailed(in PickupItemContext context)
         {
         }
 
@@ -80,22 +104,72 @@ namespace Systems.SimpleInventory.Data.Items.Base
         ///     Called when item is dropped
         /// </summary>
         /// <param name="context">Context of the drop event</param>
-        protected internal virtual void OnItemDropped(DropItemContext context)
+        protected internal virtual void OnDrop(in DropItemContext context)
         {
+        }
+
+        /// <summary>
+        ///     Called when item drop fails
+        /// </summary>
+        protected internal virtual void OnDropFailed(in DropItemContext context)
+        {
+            
+        }
+
+        /// <summary>
+        ///     Called when item is added to inventory
+        /// </summary>
+        protected internal virtual void OnAddToInventory(in AddItemContext context)
+        {
+            
+        }
+
+        /// <summary>
+        ///     Called when item addition to inventory fails
+        /// </summary>
+        protected internal virtual void OnAddToInventoryFailed(in AddItemContext context)
+        {
+            
+        }
+
+        /// <summary>
+        ///     Called when item is taken from inventory
+        /// </summary>
+        protected internal virtual void OnTakeFromInventory(in TakeItemContext context)
+        {
+            
+        }
+
+        /// <summary>
+        ///     Called when item removal from inventory fails
+        /// </summary>
+        protected internal virtual void OnTakeFromInventoryFailed(in TakeItemContext context)
+        {
+            
         }
 
         /// <summary>
         ///     Called when item is transferred
         /// </summary>
         /// <param name="context">Context of the transfer event</param>
-        protected internal virtual void OnTransfer(TransferItemContext context)
+        protected internal virtual void OnTransfer(in TransferItemContext context)
         {
         }
+
+        /// <summary>
+        ///     Called when item transfer fails
+        /// </summary>
+        protected internal virtual void OnTransferFailed(in TransferItemContext context)
+        {
+            
+        }
+
+#endregion
 
 #region Utility
 
         /// <summary>
-        ///     Spawns item as pickup object, this triggers <see cref="OnItemDropped"/> event and should be used
+        ///     Spawns item as pickup object, this triggers <see cref="OnDrop"/> event and should be used
         ///     from external scripts 
         /// </summary>
         /// <param name="itemObj">Item to spawn</param>
@@ -116,7 +190,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
             itemObj.Item.SpawnPickup<TPickupItemType>(itemObj, amount, position, rotation, parent);
 
             // Call event
-            itemObj.Item.OnItemDropped(new DropItemContext(null, itemObj, amount));
+            itemObj.Item.OnDrop(new DropItemContext(null, itemObj, amount));
         }
 
 
@@ -158,7 +232,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="itemData">Data for the world item</param>
         /// <returns>New world item</returns>
-        [NotNull] public virtual WorldItem GenerateWorldItem([CanBeNull] ItemData itemData) => 
+        [NotNull] public virtual WorldItem GenerateWorldItem([CanBeNull] ItemData itemData) =>
             new(this, itemData);
     }
 }

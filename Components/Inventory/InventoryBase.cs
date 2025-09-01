@@ -20,7 +20,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 {
     /// <summary>
     ///     Represents inventory that can contain items
-    ///     TODO: Add using checks to usable and equippable items for inventory-level validation
+    ///     TODO: option to silence events?
     /// </summary>
     public abstract class InventoryBase : MonoBehaviour
     {
@@ -265,8 +265,14 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Create context
             UseItemContext context = new(this, slotIndex);
 
-            if (!usableItem.CanUse(context)) return UseItemResult.CannotBeUsed;
+            if (!usableItem.CanUse(context))
+            {
+                OnItemUseFailed(context);
+                return UseItemResult.CannotBeUsed;
+            }
+
             usableItem.OnUse(context);
+            OnItemUsed(context);
             return UseItemResult.UsedSuccessfully;
         }
 
@@ -339,7 +345,13 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Create context
             DropItemContext context = new(this, item, amount);
 
-            // TODO: ItemBase.CanDrop, InventoryBase.CanDrop
+            // Check if item can be dropped
+            if (!CanDropItem(context) || !item.Item.CanDrop(context))
+            {
+                OnItemDropFailed(context);
+                item.Item.OnDropFailed(context);
+                return false;
+            }
 
             // Try to take required items
             if (!TryTake(item, amount)) return false;
@@ -350,7 +362,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Call events
             OnItemDropped(context);
-            item.Item.OnItemDropped(context);
+            item.Item.OnDrop(context);
             return true;
         }
 
@@ -380,39 +392,37 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Transfers specified amount of items from this inventory to another inventory
         /// </summary>
-        /// <param name="itemBase">Item to transfer</param>
+        /// <param name="item">Item to transfer</param>
         /// <param name="targetInventory">Inventory to transfer item to</param>
         /// <param name="amount">Amount of items to transfer</param>
         /// <returns>True if transfer was successful</returns>
         public bool TransferItems(
-            [NotNull] WorldItem itemBase,
+            [NotNull] WorldItem item,
             [NotNull] InventoryBase targetInventory,
             int amount)
         {
             // Create context
-            TransferItemContext context = new(this, targetInventory, itemBase, amount);
+            // TODO: Rework to be similar to take item?
+            TransferItemContext context = new(this, targetInventory, item, amount);
 
-            // TODO: ItemBase.CanTransfer, InventoryBase.CanTransfer
-            //       remember to use inventory comparison when moving code out
-            //       as in case of same inventory this may be false
+            // Check if transfer is allowed
+            if (!CanTransferItem(context) || !item.Item.CanTransfer(context)) return false;
 
             // Check if this inventory has enough items
-            if (!Has(itemBase, amount)) return false;
+            if (!Has(item, amount)) return false;
 
             // Check if other inventory has enough space
-            if (!targetInventory.CanStore(itemBase, amount)) return false;
-
-            // TODO: Virtualize transfer method
+            if (!targetInventory.CanStore(item, amount)) return false;
 
             // Transfer items by taking and adding to other inventory
-            bool takeResult = TryTake(itemBase, amount);
+            bool takeResult = TryTake(item, amount);
             Assert.IsTrue(takeResult, "Failed to take items from inventory, this should never happen");
 
-            int addResult = targetInventory.TryAdd(itemBase, amount);
+            int addResult = targetInventory.TryAdd(item, amount);
             Assert.IsTrue(addResult == amount, "Failed to add items to inventory, this should never happen");
 
             // Call events
-            itemBase.Item.OnTransfer(context);
+            item.Item.OnTransfer(context);
             return true;
         }
 
@@ -434,7 +444,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             [NotNull] InventoryBase targetInventory,
             int targetSlot,
             bool allowPartialTransfer = true,
-            bool swapIfOccupied = true) // TODO: Combine properties into flag enum
+            bool swapIfOccupied = true)
         {
             // Ensure slots are valid
             if (sourceSlot < 0 || sourceSlot >= _inventoryData.Count) return false;
@@ -455,18 +465,21 @@ namespace Systems.SimpleInventory.Components.Inventory
                     sourceSlotData.Item,
                     sourceSlotData.Amount);
 
-                // TODO: Check if transfer is allowed
+                // Check if transfer is allowed
+                if (!CanTransferItem(sourceTransferContext)) return false;
+                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
 
                 // Handle stack transfer
                 int spaceLeft = targetSlotData.SpaceLeft;
                 if (spaceLeft < sourceSlotData.Amount && !allowPartialTransfer) return false;
-                
+
                 // Transfer stack (partially too) and complete
                 int amountToTransfer = math.min(sourceSlotData.Amount, spaceLeft);
                 targetSlotData.Amount += amountToTransfer;
                 sourceSlotData.Amount -= amountToTransfer;
 
-                // BUG: Source slot data is not cleared if amount is zero
+                // We should ensure that source slot is cleared when it reaches zero
+                if (sourceSlotData.Amount == 0) ClearSlot(sourceSlot);
 
                 // Call events
                 sourceTransferContext.item.Item.OnTransfer(sourceTransferContext);
@@ -487,7 +500,12 @@ namespace Systems.SimpleInventory.Components.Inventory
                     targetSlotData.Item,
                     targetSlotData.Amount);
 
-                // TODO: Check if transfers are allowed
+                // Check if transfers are allowed
+                if (!CanTransferItem(sourceTransferContext)) return false;
+                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
+
+                if (!CanTransferItem(targetTransferContext)) return false;
+                if (!targetSlotData.Item.Item.CanTransfer(targetTransferContext)) return false;
 
                 // Swap items
                 InventorySlot.Swap(sourceSlotData, targetSlotData);
@@ -503,7 +521,9 @@ namespace Systems.SimpleInventory.Components.Inventory
                     sourceSlotData.Item,
                     sourceSlotData.Amount);
 
-                // TODO: Check if transfer is allowed
+                // Check if transfer is allowed
+                if (!CanTransferItem(sourceTransferContext)) return false;
+                if (!sourceSlotData.Item.Item.CanTransfer(sourceTransferContext)) return false;
 
                 // Handle target slot being empty
                 targetSlotData.Item = sourceSlotData.Item;
@@ -640,7 +660,27 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Prevent execution if count is invalid
             if (amountToAdd <= 0) return 0;
 
-            // TODO: ItemBase.CanAdd, InventoryBase.CanAdd
+            // Create context
+            AddItemContext context = new(item, this, amountToAdd);
+
+            // Check if item can be added
+            if (item.Item.CanAdd(context) && CanAddItem(context)) return Add(item, amountToAdd);
+
+            // Call events if not
+            OnItemAddFailed(context);
+            item.Item.OnAddToInventoryFailed(context);
+            return amountToAdd;
+        }
+
+        /// <summary>
+        ///     Adds items to inventory
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="amountToAdd">Amount of items to add</param>
+        /// <returns>Amount of items that could not be added</returns>
+        protected virtual int Add([NotNull] WorldItem item, int amountToAdd)
+        {
+            int originalAmount = amountToAdd;
 
             // Iterate through inventory slots
             // and attempt to add items if already occupied by same item id
@@ -681,6 +721,14 @@ namespace Systems.SimpleInventory.Components.Inventory
                 if (amountToAdd <= 0) break;
             }
 
+            // Check if was added
+            int change = originalAmount - amountToAdd;
+            if (change <= 0) return amountToAdd <= 0 ? 0 : amountToAdd;
+
+            // Call events
+            OnItemAdded(new AddItemContext(item, this, change));
+            item.Item.OnAddToInventory(new AddItemContext(item, this, change));
+
             // Return remaining amount
             return amountToAdd <= 0 ? 0 : amountToAdd;
         }
@@ -712,48 +760,20 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Prevent execution if count is invalid
             if (amountToTake <= 0) return false;
 
-            // TODO: ItemBase.CanTake, InventoryBase.CanTake
+            // Create context
+            TakeItemContext context = new(null, item, this, amountToTake);
 
-            int currentItemCount = 0;
-            UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
-
-            // Compute all slots that contain item
-            for (int i = 0; i < _inventoryData.Count; i++)
+            // Check if item can be taken
+            if (!item.CanTake(context) || !CanTakeItem(context))
             {
-                WorldItem itemData = _inventoryData[i].Item;
-                if (itemData is null) continue;
-                if (!Equals(itemData.Item, item)) continue;
-
-                currentItemCount += _inventoryData[i].Amount;
-                itemSlots.Add(i);
-                if (currentItemCount >= amountToTake) break;
-            }
-
-            // Return false if not enough items
-            if (currentItemCount < amountToTake)
-            {
-                itemSlots.Dispose();
+                OnItemTakeFailed(context);
+                item.OnTakeFromInventoryFailed(context);
                 return false;
             }
 
-            // Take enough items
-            for (int i = 0; i < itemSlots.Length; i++)
-            {
-                InventorySlot slot = _inventoryData[itemSlots[i]];
-
-                // Perform take operation
-                int nToTake = math.min(amountToTake, slot.Amount);
-                slot.Amount -= nToTake;
-                amountToTake -= nToTake;
-
-                // If slot is empty, remove item reference
-                if (slot.Amount == 0) slot.Item = null;
-
-                // Return true if enough items were taken
-                if (amountToTake == 0) break;
-            }
-
-            itemSlots.Dispose();
+            // Take item and verify
+            int amountLeft = Take(item, amountToTake);
+            Assert.AreEqual(amountLeft, 0, "Failed to take items from inventory, this should never happen");
             return true;
         }
 
@@ -771,31 +791,83 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Prevent execution if count is invalid
             if (amountToTake <= 0) return false;
 
-            // TODO: ItemBase.CanTake, InventoryBase.CanTake
+            // Create context
+            TakeItemContext context = new(item, item.Item, this, amountToTake);
+            
+            // Check if item can be taken
+            if (!item.Item.CanTake(context) || !CanTakeItem(context))
+            {
+                OnItemTakeFailed(context);
+                item.Item.OnTakeFromInventoryFailed(context);
+                return false;
+            }
+            
+            // Take item and verify
+            int amountLeft = Take(item, amountToTake);
+            Assert.AreEqual(amountLeft, 0, "Failed to take items from inventory, this should never happen");
+            return true;
+        }
 
-            int currentItemCount = 0;
-            UnsafeList<int> itemSlots = new(32, Allocator.TempJob);
+        /// <summary>
+        ///     Take a specific item from inventory
+        /// </summary>
+        /// <param name="item">Item to take</param>
+        /// <param name="amountToTake">Amount to take</param>
+        /// <returns>True if items were taken, false otherwise</returns>
+        protected virtual int Take([NotNull] ItemBase item, int amountToTake)
+        {
+            // Update context with real taken amount
+            int amountLeft = Take<ItemBase>(item, amountToTake);
+            
+            // Create context
+            TakeItemContext context = new(null, item, this, amountToTake - amountLeft);
+
+            OnItemTaken(context);
+            item.OnTakeFromInventory(context);
+            return amountLeft;
+        }
+
+        /// <summary>
+        ///     Take a specific world item from inventory
+        /// </summary>
+        /// <param name="item">Item to take</param>
+        /// <param name="amountToTake">Amount of items to take</param>
+        /// <returns>Amount of items left to take</returns>
+        protected virtual int Take([NotNull] WorldItem item, int amountToTake)
+        {
+            // Update context with real taken amount
+            int amountLeft = Take<WorldItem>(item, amountToTake);
+
+            // Create context
+            TakeItemContext context = new(item, item.Item, this, amountToTake - amountLeft);
+
+            OnItemTaken(context);
+            item.Item.OnTakeFromInventory(context);
+            return amountLeft;
+        }
+
+        protected int Take<TItemType>([NotNull] TItemType item, int amountToTake)
+        {
+            // Ensure proper type
+            Assert.IsTrue(item is ItemBase || item is WorldItem, "Invalid item type");
 
             // Compute all slots that contain item
             for (int i = 0; i < _inventoryData.Count; i++)
             {
-                if (!Equals(_inventoryData[i].Item, item)) continue;
-                currentItemCount += _inventoryData[i].Amount;
-                itemSlots.Add(i);
-                if (currentItemCount >= amountToTake) break;
-            }
+                // Acquire data
+                InventorySlot slot = _inventoryData[i];
+                WorldItem itemData = slot.Item;
+                if (itemData is null) continue;
 
-            // Return false if not enough items
-            if (currentItemCount < amountToTake)
-            {
-                itemSlots.Dispose();
-                return false;
-            }
-
-            // Take enough items
-            for (int i = 0; i < itemSlots.Length; i++)
-            {
-                InventorySlot slot = _inventoryData[itemSlots[i]];
+                // Check for methodology
+                if (item is ItemBase itemBase)
+                {
+                    if (!Equals(itemData.Item, itemBase)) continue;
+                }
+                else if (item is WorldItem worldItem)
+                {
+                    if (!Equals(itemData.Item, worldItem)) continue;
+                }
 
                 // Perform take operation
                 int nToTake = math.min(amountToTake, slot.Amount);
@@ -803,14 +875,13 @@ namespace Systems.SimpleInventory.Components.Inventory
                 amountToTake -= nToTake;
 
                 // If slot is empty, remove item reference
-                if (slot.Amount == 0) slot.Item = null;
+                if (slot.Amount == 0) ClearSlot(i);
 
                 // Return true if enough items were taken
                 if (amountToTake == 0) break;
             }
 
-            itemSlots.Dispose();
-            return true;
+            return amountToTake;
         }
 
         /// <summary>
@@ -879,6 +950,30 @@ namespace Systems.SimpleInventory.Components.Inventory
 
 #endregion
 
+#region Checks
+
+        /// <summary>
+        ///     Checks if item can be added to inventory
+        /// </summary>
+        protected virtual bool CanAddItem(AddItemContext context) => GetFreeSpaceFor(context.item) >= context.amount;
+
+        /// <summary>
+        ///     Checks if item can be taken from inventory
+        /// </summary>
+        protected virtual bool CanTakeItem(TakeItemContext context) => Count(context.item) >= context.amount;
+
+        /// <summary>
+        ///     Checks if item can be dropped from inventory
+        /// </summary>
+        protected virtual bool CanDropItem(DropItemContext context) => true;
+
+        /// <summary>
+        ///     Checks if item can be transferred
+        /// </summary>
+        protected virtual bool CanTransferItem(TransferItemContext context) => true;
+
+#endregion
+
 #region Events
 
         protected void Awake()
@@ -908,6 +1003,55 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="context">Context of the drop event</param>
         protected virtual void OnItemDropped(in DropItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item drop fails
+        /// </summary>
+        protected virtual void OnItemDropFailed(in DropItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item is used
+        /// </summary>
+        protected virtual void OnItemUsed(in UseItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item use fails
+        /// </summary>
+        protected virtual void OnItemUseFailed(in UseItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item is added to inventory
+        /// </summary>
+        protected virtual void OnItemAdded(in AddItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item addition fails
+        /// </summary>
+        protected virtual void OnItemAddFailed(in AddItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item is taken from inventory
+        /// </summary>
+        protected virtual void OnItemTaken(in TakeItemContext context)
+        {
+        }
+
+        /// <summary>
+        ///     Called when item take fails
+        /// </summary>
+        protected virtual void OnItemTakeFailed(in TakeItemContext context)
         {
         }
 

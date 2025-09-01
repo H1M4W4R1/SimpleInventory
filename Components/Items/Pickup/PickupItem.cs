@@ -49,7 +49,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
             if (pickedUpAmount > 0)
             {
                 toInventory.OnItemPickedUp(context);
-                Item.Item.OnPickedUp(context);
+                Item.Item.OnPickup(context);
             }
             else
             {
