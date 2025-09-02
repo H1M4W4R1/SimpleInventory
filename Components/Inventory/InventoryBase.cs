@@ -787,7 +787,8 @@ namespace Systems.SimpleInventory.Components.Inventory
             int remaining = TryAdd(item, amountToAdd, actionSource);
             if (remaining == 0) return;
 
-            DropItemAs<PickupItemWithDestroy>(item, remaining, actionSource);
+            // We drop it always as external action as it was failure of add operation
+            DropItemAs<PickupItemWithDestroy>(item, remaining);
         }
 
         /// <summary>
@@ -1084,24 +1085,27 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be added to inventory
         /// </summary>
-        protected virtual bool CanAddItem(AddItemContext context)
+        public virtual bool CanAddItem(AddItemContext context)
             => GetFreeSpaceFor(context.item) >= context.amount;
 
         /// <summary>
         ///     Checks if item can be taken from inventory
         /// </summary>
-        protected virtual bool CanTakeItem(TakeItemContext context) => Count(context.item) >= context.amount;
+        public virtual bool CanTakeItem(TakeItemContext context) => Count(context.item) >= context.amount;
 
         /// <summary>
         ///     Checks if item can be dropped from inventory
         /// </summary>
-        protected virtual bool CanDropItem(DropItemContext context) => CanTakeItem(new TakeItemContext(
+        public virtual bool CanDropItem(DropItemContext context) => CanTakeItem(new TakeItemContext(
             context.item, this, context.amount));
 
         /// <summary>
         ///     Checks if item can be transferred
         /// </summary>
-        protected virtual bool CanTransferItem(TransferItemContext context)
+        /// <remarks>
+        ///     It's heavily discouraged to override this method
+        /// </remarks>
+        public virtual bool CanTransferItem(TransferItemContext context)
         {
             // Handle separate case for stupid multi-slot transfers
             if (context.IsMultiSlotTransfer)

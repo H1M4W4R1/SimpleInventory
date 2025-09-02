@@ -23,6 +23,11 @@ namespace Systems.SimpleInventory.Data.Context
         public readonly WorldItem item;
         
         /// <summary>
+        ///     Item base for easier handling
+        /// </summary>
+        public readonly EquippableItemBase itemBase;
+        
+        /// <summary>
         ///     Equipment where item is being unequipped
         /// </summary>
         public readonly EquipmentBase equipment;
@@ -42,8 +47,9 @@ namespace Systems.SimpleInventory.Data.Context
             this.inventory = inventory;
             this.equipment = equipment;
             this.item = item;
+            itemBase = item.Item as EquippableItemBase;
             this.addToInventory = addToInventory;
-            Assert.IsTrue(item.Item is EquippableItemBase, "Item is not equippable");
+            Assert.IsNotNull(itemBase, "Item is not equippable");
         }
     }
 }

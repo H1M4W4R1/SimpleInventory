@@ -60,30 +60,32 @@ namespace Systems.SimpleInventory.Data.Items.Base
             return Identifier.CompareTo(other);
         }
 
+#region Checks
+
         /// <summary>
         /// Checks if item can be added to inventory
         /// </summary>
-        protected internal bool CanAdd(in AddItemContext context) => true;
-        
+        public bool CanAdd(in AddItemContext context) => true;
+
         /// <summary>
         ///     Checks if item can be taken from inventory
         /// </summary>
-        protected internal bool CanTake(in TakeItemContext context) => true;
-        
+        public bool CanTake(in TakeItemContext context) => true;
+
         /// <summary>
         ///     Checks if item can be dropped
         /// </summary>
-        protected internal bool CanDrop(in DropItemContext context) => true;
-        
+        public bool CanDrop(in DropItemContext context) => true;
+
         /// <summary>
         ///     Checks if item can be transferred
         /// </summary>
-        protected internal bool CanTransfer(in TransferItemContext context) => true;
-        
+        public bool CanTransfer(in TransferItemContext context) => true;
+
+#endregion
+
 #region Events
 
-        
-        
         /// <summary>
         ///     Event called when item is picked up
         /// </summary>
@@ -113,7 +115,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnDropFailed(in DropItemContext context)
         {
-            
         }
 
         /// <summary>
@@ -121,7 +122,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnAddToInventory(in AddItemContext context)
         {
-            
         }
 
         /// <summary>
@@ -129,7 +129,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnAddToInventoryFailed(in AddItemContext context)
         {
-            
         }
 
         /// <summary>
@@ -137,7 +136,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnTakeFromInventory(in TakeItemContext context)
         {
-            
         }
 
         /// <summary>
@@ -145,7 +143,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnTakeFromInventoryFailed(in TakeItemContext context)
         {
-            
         }
 
         /// <summary>
@@ -161,7 +158,6 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnTransferFailed(in TransferItemContext context)
         {
-            
         }
 
 #endregion

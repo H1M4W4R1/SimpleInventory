@@ -5,7 +5,7 @@ namespace Systems.SimpleInventory.Examples.Equipment
 {
     public sealed class ExampleEquipment : EquipmentBase
     {
-        public override void BuildEquipmentSlots()
+        protected override void BuildEquipmentSlots()
         {
             // Create slots
             AddEquipmentSlotFor<HelmetItemBase>();

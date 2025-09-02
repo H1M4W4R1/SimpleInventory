@@ -20,12 +20,20 @@ namespace Systems.SimpleInventory.Components.Equipment
     {
         private bool _areEquipmentSlotsBuilt;
 
-        [field: SerializeField]
-        [Tooltip("Position to drop item at when removing slot with drop enabled")]
+        [field: SerializeField] [Tooltip("Position to drop item at when removing slot with drop enabled")]
         private Transform DropPositionFallback { get; set; }
 
         // ReSharper disable once CollectionNeverUpdated.Global
         internal readonly List<EquipmentSlot> equipmentSlots = new();
+
+        private void Awake()
+        {
+            if (_areEquipmentSlotsBuilt) return;
+            BuildEquipmentSlots();
+            _areEquipmentSlotsBuilt = true;
+        }
+
+#region Equipment Slots
 
         /// <summary>
         ///     Must be called to build equipment slots
@@ -35,7 +43,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         ///     <see cref="AddEquipmentSlotFor{TItemType}"/> method.
         ///     Clear list before adding any equipment slots to support multiple calls to this method.
         /// </remarks>
-        public abstract void BuildEquipmentSlots();
+        protected abstract void BuildEquipmentSlots();
 
         /// <summary>
         ///     Adds equipment slot for specific item type.
@@ -110,193 +118,7 @@ namespace Systems.SimpleInventory.Components.Equipment
                 return;
             }
         }
-    
-        /// <summary>
-        ///     Gets first equipped item for specific item type
-        /// </summary>
-        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
-        /// <returns>First equipped item or null if no item is equipped</returns>
-        [CanBeNull] public TItemBase GetFirstEquippedBaseItemFor<TItemBase>()
-            where TItemBase : EquippableItemBase
-        {
-            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
-            if (ReferenceEquals(slot, null)) return null;
-            if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) return null;
-            return slot.CurrentlyEquippedItem.Item as TItemBase;
-        }
-        
-        /// <summary>
-        ///     Gets first equipped item for specific item type
-        /// </summary>
-        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
-        /// <returns>First equipped item or null if no item is equipped</returns>
-        [CanBeNull] public WorldItem GetFirstEquippedItemFor<TItemBase>()
-            where TItemBase : EquippableItemBase
-        {
-            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
-            return slot?.CurrentlyEquippedItem;
-        }
 
-        /// <summary>
-        ///     Gets all equipped items for specific item type
-        /// </summary>
-        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
-        /// <returns>List of equipped items</returns>
-        [NotNull] public IReadOnlyList<TItemBase> GetAllEquippedItemsFor<TItemBase>()
-            where TItemBase : EquippableItemBase
-        {
-            List<TItemBase> items = new();
-            
-            for (int i = 0; i < equipmentSlots.Count; i++)
-            {
-                EquipmentSlot slot = equipmentSlots[i];
-                if (slot.IsItemValid<TItemBase>()) continue;
-                if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
-                if (slot.CurrentlyEquippedItem.Item is not TItemBase item) continue;
-                items.Add(item);
-            }
-            
-            return items;
-        }
-
-        private void Awake()
-        {
-            if (_areEquipmentSlotsBuilt) return;
-            BuildEquipmentSlots();
-            _areEquipmentSlotsBuilt = true;
-        }
-
-        /// <summary>
-        ///     Check if item can be unequipped
-        /// </summary>
-        /// <param name="context">Context of action</param>
-        /// <returns>True if item can be unequipped</returns>
-        public virtual bool CanUnequip(in UnequipItemContext context) => true;
-
-        /// <summary>
-        ///     Check if item can be equipped
-        /// </summary>
-        /// <param name="context">Context of action</param>
-        /// <returns>True if item can be equipped</returns>
-        public virtual bool CanEquip(in EquipItemContext context) => true;
-
-        /// <summary>
-        ///     Equips an item.
-        /// </summary>
-        /// <param name="context">Context of action</param>
-        /// <returns>Result of action</returns>
-        internal EquipItemResult Equip(in EquipItemContext context)
-        {
-            EquippableItemBase equippableItemRef = context.item.Item as EquippableItemBase;
-            if (equippableItemRef is null) return EquipItemResult.InvalidItem;
-            
-            // Check if already equipped
-            if (equippableItemRef.IsEquipped(context))
-            {
-                OnItemAlreadyEquipped(context);
-                return EquipItemResult.AlreadyEquipped;
-            }
-
-            // Check if item can be equipped
-            if (!equippableItemRef.CanEquip(context) || !CanEquip(context))
-            {
-                OnItemCannotBeEquipped(context);
-                return EquipItemResult.NotAllowed;
-            }
-
-            // Find first empty slot we can equip item to
-            EquipmentSlot slot = context.allowReplace
-                ? GetFreeOrSwapSlot(context.item)
-                : GetFreeSlot(context.item);
-            if (slot == null) return EquipItemResult.NoFreeSlots;
-
-            // Sanity check for same item
-            if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
-                return EquipItemResult.AlreadyEquipped;
-            
-            // Unequip item if was already equipped
-            if (!ReferenceEquals(slot.CurrentlyEquippedItem, null))
-            {
-                if(context.slot.inventory is not null)
-                    context.slot.inventory.UnequipItem(
-                        slot.CurrentlyEquippedItem, this);
-                else
-                {
-                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
-                        ? transform
-                        : DropPositionFallback;
-                    ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
-                        1, objTransform.position, objTransform.rotation);
-                }
-            }
-            
-            // Equip item to slot
-            slot.EquipItem(context.item);
-
-            // Take item from inventory
-            if (context.removeFromInventory && context.slot.inventory is not null)
-                context.slot.inventory.Take(context.slot.slotIndex, InventoryActionSource.External);
-
-            // Call events
-            equippableItemRef.OnEquip(context);
-            OnItemEquipped(context);
-
-            return EquipItemResult.EquippedSuccessfully;
-        }
-
-        /// <summary>
-        ///     Unequips an item.
-        /// </summary>
-        /// <param name="context">Context of action</param>
-        /// <returns>Result of action</returns>
-        internal UnequipItemResult Unequip(in UnequipItemContext context)
-        {
-            // Get item to unequip
-            EquippableItemBase equippableItemRef = context.item.Item as EquippableItemBase;
-            if (equippableItemRef is null) return UnequipItemResult.InvalidItem;
-            
-            // Check if already unequipped
-            if (!equippableItemRef.IsEquipped(context))
-            {
-                OnItemAlreadyUnequipped(context);
-                return UnequipItemResult.NotEquipped;
-            }
-
-            // Check if item can be unequipped
-            if (!equippableItemRef.CanUnequip(context) || !CanUnequip(context))
-            {
-                OnItemCannotBeUnequipped(context);
-                return UnequipItemResult.NotAllowed;
-            }
-
-            // Get item to unequip
-            EquipmentSlot slot = GetFirstEquippedSlot(context.item);
-            if (slot == null) return UnequipItemResult.NotEquipped;
-
-            // Add item to inventory if needed
-            if (context.addToInventory && context.inventory is not null)
-            {
-                context.inventory.TryAddOrDrop(context.item, 1);
-            }
-            else if (context.addToInventory)
-            {
-                Transform objTransform = ReferenceEquals(DropPositionFallback, null)
-                    ? transform
-                    : DropPositionFallback;
-                ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
-                    1, objTransform.position, objTransform.rotation);
-            }
-
-            // Unequip item
-            Assert.IsTrue(slot.UnequipItem(),
-                "Something went wrong while unequipping item, this should never happen");
-
-            // Call events
-            OnItemUnequipped(context);
-            equippableItemRef.OnUnequip(context);
-
-            return UnequipItemResult.UnequippedSuccessfully;
-        }
 
         /// <summary>
         ///     Gets first free slot for item.
@@ -358,7 +180,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             return null;
         }
-        
+
         /// <summary>
         ///     Gets first equipped slot for item.
         /// </summary>
@@ -396,11 +218,62 @@ namespace Systems.SimpleInventory.Components.Equipment
             return null;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-        public bool IsEquipped([NotNull] in WorldItem item) =>
+#endregion
+
+#region Item access
+
+        /// <summary>
+        ///     Gets first equipped item for specific item type
+        /// </summary>
+        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
+        /// <returns>First equipped item or null if no item is equipped</returns>
+        [CanBeNull] public TItemBase GetFirstEquippedBaseItemFor<TItemBase>()
+            where TItemBase : EquippableItemBase
+        {
+            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
+            if (ReferenceEquals(slot, null)) return null;
+            if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) return null;
+            return slot.CurrentlyEquippedItem.Item as TItemBase;
+        }
+
+        /// <summary>
+        ///     Gets first equipped item for specific item type
+        /// </summary>
+        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
+        /// <returns>First equipped item or null if no item is equipped</returns>
+        [CanBeNull] public WorldItem GetFirstEquippedItemFor<TItemBase>()
+            where TItemBase : EquippableItemBase
+        {
+            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
+            return slot?.CurrentlyEquippedItem;
+        }
+
+        /// <summary>
+        ///     Gets all equipped items for specific item type
+        /// </summary>
+        /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
+        /// <returns>List of equipped items</returns>
+        [NotNull] public IReadOnlyList<TItemBase> GetAllEquippedItemsFor<TItemBase>()
+            where TItemBase : EquippableItemBase
+        {
+            List<TItemBase> items = new();
+
+            for (int i = 0; i < equipmentSlots.Count; i++)
+            {
+                EquipmentSlot slot = equipmentSlots[i];
+                if (slot.IsItemValid<TItemBase>()) continue;
+                if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
+                if (slot.CurrentlyEquippedItem.Item is not TItemBase item) continue;
+                items.Add(item);
+            }
+
+            return items;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped([NotNull] in WorldItem item) =>
             GetFirstEquippedSlot(item) != null;
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsEquipped([NotNull] in EquippableItemBase item) =>
             GetFirstEquippedSlot(item) != null;
 
@@ -409,8 +282,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Action context</param>
         /// <returns>True if item is equipped</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsEquipped(in EquipItemContext context)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in EquipItemContext context)
             => IsEquipped(context.item);
 
         /// <summary>
@@ -421,28 +293,179 @@ namespace Systems.SimpleInventory.Components.Equipment
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in UnequipItemContext context)
             => IsEquipped(context.item);
 
+#endregion
+
+#region Equip and Unequip items
+
+        /// <summary>
+        ///     Equips an item.
+        /// </summary>
+        /// <param name="context">Context of action</param>
+        /// <param name="flags">Flags for modifying action</param>
+        /// <returns>Result of action</returns>
+        internal EquipItemResult Equip(
+            in EquipItemContext context,
+            EquipmentModificationFlags flags =
+                EquipmentModificationFlags.None)
+        {
+            EquippableItemBase equippableItemRef = context.itemBase;
+            
+            // Check if already equipped
+            if (equippableItemRef.IsEquipped(context))
+            {
+                OnItemAlreadyEquipped(context);
+                return EquipItemResult.AlreadyEquipped;
+            }
+
+            // Check if item can be equipped
+            if (!CanEquip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            {
+                OnItemCannotBeEquipped(context);
+                return EquipItemResult.NotAllowed;
+            }
+
+            // Find first empty slot we can equip item to
+            EquipmentSlot slot = context.allowReplace
+                ? GetFreeOrSwapSlot(context.item)
+                : GetFreeSlot(context.item);
+            if (slot == null) return EquipItemResult.NoFreeSlots;
+
+            // Sanity check for same item
+            if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item)) return EquipItemResult.AlreadyEquipped;
+
+            // Unequip item if was already equipped
+            if (!ReferenceEquals(slot.CurrentlyEquippedItem, null))
+            {
+                if (context.slot.inventory is not null)
+                    context.slot.inventory.UnequipItem(
+                        slot.CurrentlyEquippedItem, this);
+                else
+                {
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                        ? transform
+                        : DropPositionFallback;
+                    ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
+                        1, objTransform.position, objTransform.rotation);
+                }
+            }
+
+            // Equip item to slot
+            slot.EquipItem(context.item);
+
+            // Take item from inventory silently (if needed)
+            if (context.removeFromInventory && context.slot.inventory is not null)
+                context.slot.inventory.Take(context.slot.slotIndex, InventoryActionSource.Internal);
+
+            // Call events
+            OnItemEquipped(context);
+            return EquipItemResult.EquippedSuccessfully;
+        }
+
+        /// <summary>
+        ///     Unequips an item.
+        /// </summary>
+        /// <param name="context">Context of action</param>
+        /// <param name="flags">Flags for modifying action</param>
+        /// <returns>Result of action</returns>
+        internal UnequipItemResult Unequip(in UnequipItemContext context,
+            EquipmentModificationFlags flags =
+                EquipmentModificationFlags.None)
+        {
+            EquippableItemBase equippableItemRef = context.itemBase;
+
+            // Check if already unequipped
+            if (!equippableItemRef.IsEquipped(context))
+            {
+                OnItemAlreadyUnequipped(context);
+                return UnequipItemResult.NotEquipped;
+            }
+
+            // Check if item can be unequipped
+            if (!CanUnequip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            {
+                OnItemCannotBeUnequipped(context);
+                return UnequipItemResult.NotAllowed;
+            }
+
+            // Get item to unequip
+            EquipmentSlot slot = GetFirstEquippedSlot(context.item);
+            if (slot == null) return UnequipItemResult.NotEquipped;
+
+            // Add item to inventory if needed
+            if (context.addToInventory && context.inventory is not null)
+                context.inventory.TryAddOrDrop(context.item, 1, InventoryActionSource.Internal);
+            else if (context.addToInventory)
+            {
+                Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                    ? transform
+                    : DropPositionFallback;
+                ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
+                    1, objTransform.position, objTransform.rotation);
+            }
+
+            // Unequip item
+            Assert.IsTrue(slot.UnequipItem(),
+                "Something went wrong while unequipping item, this should never happen");
+
+            // Call events
+            OnItemUnequipped(context);
+            return UnequipItemResult.UnequippedSuccessfully;
+        }
+
+#endregion
+
+#region Checks
+
+        /// <summary>
+        ///     Check if item can be equipped
+        /// </summary>
+        /// <param name="context">Context of action</param>
+        /// <returns>True if item can be equipped</returns>
+        public virtual bool CanEquip(in EquipItemContext context) =>
+            context.itemBase.CanEquip(context);
+
+        /// <summary>
+        ///     Check if item can be unequipped
+        /// </summary>
+        /// <param name="context">Context of action</param>
+        /// <returns>True if item can be unequipped</returns>
+        public virtual bool CanUnequip(in UnequipItemContext context) =>
+            context.itemBase.CanUnequip(context);
+
+#endregion
+
+#region Events
+
         protected virtual void OnItemEquipped(in EquipItemContext context)
         {
+            context.itemBase.OnEquip(context);
         }
 
         protected virtual void OnItemUnequipped(in UnequipItemContext context)
         {
+            context.itemBase.OnUnequip(context);
         }
 
         protected virtual void OnItemAlreadyEquipped(in EquipItemContext context)
         {
+            context.itemBase.OnAlreadyEquipped(context);
         }
 
         protected virtual void OnItemAlreadyUnequipped(in UnequipItemContext context)
         {
+            context.itemBase.OnAlreadyUnequipped(context);
         }
 
         protected virtual void OnItemCannotBeEquipped(in EquipItemContext context)
         {
+            context.itemBase.OnCannotBeEquipped(context);
         }
 
         protected virtual void OnItemCannotBeUnequipped(in UnequipItemContext context)
         {
+            context.itemBase.OnCannotBeUnequipped(context);
         }
+
+#endregion
     }
 }

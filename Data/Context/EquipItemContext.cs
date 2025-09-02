@@ -22,6 +22,11 @@ namespace Systems.SimpleInventory.Data.Context
         ///     Item being equipped
         /// </summary>
         public readonly WorldItem item;
+
+        /// <summary>
+        ///     Reference to item base for easier handling
+        /// </summary>
+        public readonly EquippableItemBase itemBase; 
         
         /// <summary>
         ///     Equipment where item is being equipped
@@ -48,9 +53,10 @@ namespace Systems.SimpleInventory.Data.Context
             this.equipment = equipment;
             slot = new InventorySlotContext(inventory, slotIndex);
             item = slot.Item;
+            itemBase = item?.Item as EquippableItemBase;
             this.allowReplace = allowReplace;
             this.removeFromInventory = removeFromInventory;
-            Assert.IsTrue(item?.Item is EquippableItemBase, "Item is not equippable");
+            Assert.IsNotNull(itemBase, "Item is not equippable");
         }
     }
 }
