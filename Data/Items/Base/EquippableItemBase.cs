@@ -1,4 +1,5 @@
-﻿using Systems.SimpleInventory.Data.Context;
+﻿using Systems.SimpleCore.Operations;
+using Systems.SimpleInventory.Data.Context;
 
 namespace Systems.SimpleInventory.Data.Items.Base
 {
@@ -28,33 +29,43 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be equipped, false otherwise</returns>
-        public virtual bool CanEquip(in EquipItemContext context) => true;
+        public virtual OperationResult CanEquip(in EquipItemContext context) => OperationResult.GenericSuccess;
 
         /// <summary>
         ///     Checks if the item can be unequipped.
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be unequipped, false otherwise</returns>
-        public virtual bool CanUnequip(in UnequipItemContext context) => true;
+        public virtual OperationResult CanUnequip(in UnequipItemContext context) => OperationResult.GenericSuccess;
 
         /// <summary>
         ///     Called when the item is equipped.
         /// </summary>
-        /// <param name="context">Context of action</param>
-        protected internal virtual void OnEquip(in EquipItemContext context){}
+        protected internal virtual void OnEquip(in EquipItemContext context, in OperationResult result){}
 
-        protected internal virtual void OnAlreadyEquipped(in EquipItemContext context){}
+        /// <summary>
+        ///     Called when the item is already equipped.
+        /// </summary>
+        protected internal virtual void OnAlreadyEquipped(in EquipItemContext context, in OperationResult result){}
         
-        protected internal virtual void OnCannotBeEquipped(in EquipItemContext context){}
+        /// <summary>
+        ///     Called when the item cannot be equipped.
+        /// </summary>
+        protected internal virtual void OnCannotBeEquipped(in EquipItemContext context, in OperationResult result){}
         
         /// <summary>
         ///     Called when the item is unequipped.
         /// </summary>
-        /// <param name="context">Context of action</param>
-        protected internal  virtual void OnUnequip(in UnequipItemContext context){}
+        protected internal  virtual void OnUnequip(in UnequipItemContext context, in OperationResult result){}
         
-        protected internal virtual void OnAlreadyUnequipped(in UnequipItemContext context){}
+        /// <summary>
+        ///     Called when item is already unequipped.
+        /// </summary>
+        protected internal virtual void OnAlreadyUnequipped(in UnequipItemContext context, in OperationResult result){}
         
-        protected internal virtual void OnCannotBeUnequipped(in UnequipItemContext context){}
+        /// <summary>
+        ///     Called when item cannot be unequipped.
+        /// </summary>
+        protected internal virtual void OnCannotBeUnequipped(in UnequipItemContext context, in OperationResult result){}
     }
 }

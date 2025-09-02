@@ -38,46 +38,18 @@ namespace Systems.SimpleInventory.Data.Context
         /// </summary>
         public readonly EquipmentModificationFlags flags;
         
-        /// <summary>
-        ///     Result of unequipping item
-        /// </summary>
-        public readonly UnequipItemResult reason;
-
-        public UnequipItemContext WithReason(UnequipItemResult newReason)
-        {
-            return new UnequipItemContext(inventory, equipment, item, itemBase, flags, newReason);
-        }
-        
         public UnequipItemContext(
             [CanBeNull] InventoryBase inventory,
             [NotNull] EquipmentBase equipment,
             [NotNull] WorldItem item,
-            EquipmentModificationFlags flags = EquipmentModificationFlags.None,
-            UnequipItemResult reason = UnequipItemResult.UnequippedSuccessfully)
+            EquipmentModificationFlags flags = EquipmentModificationFlags.None)
         {
             this.inventory = inventory;
             this.equipment = equipment;
             this.item = item;
             itemBase = item.Item as EquippableItemBase;
             this.flags = flags;
-            this.reason = reason;
             Assert.IsNotNull(itemBase, "Item is not equippable");
-        }
-        
-        private UnequipItemContext(
-            [CanBeNull] InventoryBase inventory,
-            [NotNull] EquipmentBase equipment,
-            WorldItem item,
-            EquippableItemBase itemBase,
-            EquipmentModificationFlags flags,
-            UnequipItemResult reason)
-        {
-            this.inventory = inventory;
-            this.equipment = equipment;
-            this.item = item;
-            this.itemBase = itemBase;
-            this.flags = flags;
-            this.reason = reason;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
@@ -39,8 +40,8 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         public virtual void Pickup([NotNull] InventoryBase toInventory)
         {
             // Perform
-            int amountLeft = toInventory.TryAdd(ItemInstance, Amount);
-            int pickedUpAmount = Amount - amountLeft;
+            OperationResult<int> amountLeft = toInventory.TryAdd(ItemInstance, Amount);
+            int pickedUpAmount = Amount - (int) amountLeft;
             
             // Create context of operation
             PickupItemContext context = new(this, toInventory, pickedUpAmount);
@@ -48,17 +49,15 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
             // Call inventory and item picked up events
             if (pickedUpAmount > 0)
             {
-                toInventory.OnItemPickedUp(context);
-                ItemInstance.Item.OnPickup(context);
+                toInventory.OnItemPickedUp(context, amountLeft);
             }
             else
             {
-                toInventory.OnItemPickupFailed(context);
-                ItemInstance.Item.OnPickupFailed(context);
+                toInventory.OnItemPickupFailed(context, amountLeft);
             }
 
             // Pickup was performed, update amount and check object events for re-pooling or destroy
-            Amount = amountLeft;
+            Amount = (int) amountLeft;
             OnPickupAttemptComplete(context);
         }
 

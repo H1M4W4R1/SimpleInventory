@@ -39,46 +39,20 @@ namespace Systems.SimpleInventory.Data.Context
         /// </summary>
         public readonly EquipmentModificationFlags flags;
 
-        /// <summary>
-        ///     Result of equipping item
-        /// </summary>
-        public readonly EquipItemResult reason;
-
-        public EquipItemContext WithReason(EquipItemResult newReason)
-        {
-            return new EquipItemContext(equipment, slot, item, itemBase, flags, newReason);
-        }
 
         public EquipItemContext(
             [NotNull] EquipmentBase equipment,
             [NotNull] InventoryBase inventory,
             int slotIndex,
-            EquipmentModificationFlags flags,
-            EquipItemResult reason = EquipItemResult.EquippedSuccessfully)
+            EquipmentModificationFlags flags)
         {
             this.equipment = equipment;
             slot = new InventorySlotContext(inventory, slotIndex);
             item = slot.Item;
             itemBase = item?.Item as EquippableItemBase;
             this.flags = flags;
-            this.reason = reason;
             Assert.IsNotNull(itemBase, "Item is not equippable");
         }
 
-        private EquipItemContext(
-            [NotNull] EquipmentBase equipment,
-            InventorySlotContext slot,
-            WorldItem item,
-            EquippableItemBase itemBase,
-            EquipmentModificationFlags flags,
-            EquipItemResult reason = EquipItemResult.EquippedSuccessfully)
-        {
-            this.equipment = equipment;
-            this.slot = slot;
-            this.item = item;
-            this.itemBase = itemBase;
-            this.flags = flags;
-            this.reason = reason;
-        }
     }
 }

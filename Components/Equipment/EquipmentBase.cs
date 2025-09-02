@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Systems.SimpleCore.Operations;
 using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
@@ -9,6 +10,7 @@ using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Equipment;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Base;
+using Systems.SimpleInventory.Operations;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -45,7 +47,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         ///     Clear list before adding any equipment slots to support multiple calls to this method.
         /// </remarks>
         protected abstract void BuildEquipmentSlots();
-        
+
         /// <summary>
         ///     Adds equipment slot for specific item type.
         /// </summary>
@@ -104,7 +106,7 @@ namespace Systems.SimpleInventory.Components.Equipment
                     // Create context, we must modify inventory to automatically drop item
                     // and ignore conditions to allow unequipping
                     UnequipItemContext context = new(inventory, this,
-                        slot.CurrentlyEquippedItem, flags, UnequipItemResult.Unknown);
+                        slot.CurrentlyEquippedItem, flags);
 
                     // Unequip item, will automatically drop item if it can't be added to inventory
                     // This still should trigger unequip events
@@ -396,7 +398,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// <param name="context">Context of action</param>
         /// <param name="actionSource">Action source</param>
         /// <returns>Result of action</returns>
-        internal EquipItemResult Equip(
+        internal OperationResult Equip(
             in EquipItemContext context,
             ActionSource actionSource = ActionSource.External)
         {
@@ -405,17 +407,18 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Check if already equipped
             if (equippableItemRef.IsEquipped(context))
             {
-                if (actionSource == ActionSource.Internal) return EquipItemResult.AlreadyEquipped;
-                OnItemAlreadyEquipped(context.WithReason(EquipItemResult.AlreadyEquipped));
-                return EquipItemResult.AlreadyEquipped;
+                if (actionSource == ActionSource.Internal) return InventoryOperations.AlreadyEquipped();
+                OnItemAlreadyEquipped(context, InventoryOperations.AlreadyEquipped());
+                return InventoryOperations.AlreadyEquipped();
             }
 
             // Check if item can be equipped
-            if (!CanEquip(context) && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            OperationResult canEquipResult = CanEquip(context);
+            if (!canEquipResult && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
-                if (actionSource == ActionSource.Internal) return EquipItemResult.NotAllowed;
-                OnItemCannotBeEquipped(context.WithReason(EquipItemResult.NotAllowed));
-                return EquipItemResult.NotAllowed;
+                if (actionSource == ActionSource.Internal) return canEquipResult;
+                OnItemCannotBeEquipped(context, canEquipResult);
+                return canEquipResult;
             }
 
             // Find first empty slot we can equip item to
@@ -424,17 +427,17 @@ namespace Systems.SimpleInventory.Components.Equipment
                 : GetFreeSlot(context.item);
             if (slot == null)
             {
-                if (actionSource == ActionSource.Internal) return EquipItemResult.NoFreeSlots;
-                OnItemCannotBeEquipped(context.WithReason(EquipItemResult.NoFreeSlots));
-                return EquipItemResult.NoFreeSlots;
+                if (actionSource == ActionSource.Internal) return InventoryOperations.NoFreeSlots();
+                OnItemCannotBeEquipped(context, InventoryOperations.NoFreeSlots());
+                return InventoryOperations.NoFreeSlots();
             }
 
             // Sanity check for same item
             if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
             {
-                if (actionSource == ActionSource.Internal) return EquipItemResult.AlreadyEquipped;
-                OnItemAlreadyEquipped(context.WithReason(EquipItemResult.AlreadyEquipped));
-                return EquipItemResult.AlreadyEquipped;
+                if (actionSource == ActionSource.Internal) return InventoryOperations.AlreadyEquipped();
+                OnItemAlreadyEquipped(context, InventoryOperations.AlreadyEquipped());
+                return InventoryOperations.AlreadyEquipped();
             }
 
             // Unequip item if was already equipped
@@ -462,9 +465,9 @@ namespace Systems.SimpleInventory.Components.Equipment
                 context.slot.inventory.Take(context.slot.slotIndex, ActionSource.Internal);
 
             // Call events
-            if (actionSource == ActionSource.Internal) return EquipItemResult.EquippedSuccessfully;
-            OnItemEquipped(context.WithReason(EquipItemResult.EquippedSuccessfully));
-            return EquipItemResult.EquippedSuccessfully;
+            if (actionSource == ActionSource.Internal) return InventoryOperations.Equipped();
+            OnItemEquipped(context, InventoryOperations.Equipped());
+            return InventoryOperations.Equipped();
         }
 
         /// <summary>
@@ -473,7 +476,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// <param name="context">Context of action</param>
         /// <param name="actionSource">Source of action</param>
         /// <returns>Result of action</returns>
-        internal UnequipItemResult Unequip(
+        internal OperationResult Unequip(
             in UnequipItemContext context,
             ActionSource actionSource = ActionSource.External)
         {
@@ -482,30 +485,31 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Check if already unequipped
             if (!equippableItemRef.IsEquipped(context))
             {
-                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
-                OnItemAlreadyUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
-                return UnequipItemResult.NotEquipped;
+                if (actionSource == ActionSource.Internal) return InventoryOperations.NotEquipped();
+                OnItemAlreadyUnequipped(context, InventoryOperations.NotEquipped());
+                return InventoryOperations.NotEquipped();
             }
 
             // Check if item can be unequipped
-            if (!CanUnequip(context) && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            OperationResult canUnequipResult = CanUnequip(context);
+            if (!canUnequipResult && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
-                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotAllowed;
-                OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotAllowed));
-                return UnequipItemResult.NotAllowed;
+                if (actionSource == ActionSource.Internal) return canUnequipResult;
+                OnItemCannotBeUnequipped(context, canUnequipResult);
+                return canUnequipResult;
             }
 
             // Get item to unequip
             EquipmentSlotBase slot = GetFirstEquippedSlot(context.item);
             if (slot != null) return UnequipFromSlot(slot, context, actionSource);
-            
+
             // Item is not equipped at all
-            if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
-            OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
-            return UnequipItemResult.NotEquipped;
+            if (actionSource == ActionSource.Internal) return InventoryOperations.NotEquipped();
+            OnItemCannotBeUnequipped(context, InventoryOperations.NotEquipped());
+            return InventoryOperations.NotEquipped();
         }
 
-        internal UnequipItemResult UnequipFromSlot(
+        internal OperationResult UnequipFromSlot(
             [NotNull] EquipmentSlotBase slot,
             in UnequipItemContext context,
             ActionSource actionSource = ActionSource.External)
@@ -530,9 +534,9 @@ namespace Systems.SimpleInventory.Components.Equipment
                 "Something went wrong while unequipping item, this should never happen");
 
             // Call events
-            if (actionSource == ActionSource.Internal) return UnequipItemResult.UnequippedSuccessfully;
-            OnItemUnequipped(context.WithReason(UnequipItemResult.UnequippedSuccessfully));
-            return UnequipItemResult.UnequippedSuccessfully;
+            if (actionSource == ActionSource.Internal) return InventoryOperations.Unequipped();
+            OnItemUnequipped(context, InventoryOperations.Unequipped());
+            return InventoryOperations.Unequipped();
         }
 
 #endregion
@@ -544,7 +548,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if item can be equipped</returns>
-        public virtual bool CanEquip(in EquipItemContext context) =>
+        public virtual OperationResult CanEquip(in EquipItemContext context) =>
             context.itemBase.CanEquip(context);
 
         /// <summary>
@@ -552,41 +556,41 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if item can be unequipped</returns>
-        public virtual bool CanUnequip(in UnequipItemContext context) =>
+        public virtual OperationResult CanUnequip(in UnequipItemContext context) =>
             context.itemBase.CanUnequip(context);
 
 #endregion
 
 #region Events
 
-        protected virtual void OnItemEquipped(in EquipItemContext context)
+        protected virtual void OnItemEquipped(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnEquip(context);
+            context.itemBase.OnEquip(context, result);
         }
 
-        protected virtual void OnItemUnequipped(in UnequipItemContext context)
+        protected virtual void OnItemUnequipped(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnUnequip(context);
+            context.itemBase.OnUnequip(context, result);
         }
 
-        protected virtual void OnItemAlreadyEquipped(in EquipItemContext context)
+        protected virtual void OnItemAlreadyEquipped(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnAlreadyEquipped(context);
+            context.itemBase.OnAlreadyEquipped(context, result);
         }
 
-        protected virtual void OnItemAlreadyUnequipped(in UnequipItemContext context)
+        protected virtual void OnItemAlreadyUnequipped(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnAlreadyUnequipped(context);
+            context.itemBase.OnAlreadyUnequipped(context, result);
         }
 
-        protected virtual void OnItemCannotBeEquipped(in EquipItemContext context)
+        protected virtual void OnItemCannotBeEquipped(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnCannotBeEquipped(context);
+            context.itemBase.OnCannotBeEquipped(context, result);
         }
 
-        protected virtual void OnItemCannotBeUnequipped(in UnequipItemContext context)
+        protected virtual void OnItemCannotBeUnequipped(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnCannotBeUnequipped(context);
+            context.itemBase.OnCannotBeUnequipped(context, result);
         }
 
 #endregion

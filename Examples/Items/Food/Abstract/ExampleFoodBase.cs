@@ -1,4 +1,5 @@
 ﻿using System;
+using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Base;
@@ -13,7 +14,7 @@ namespace Systems.SimpleInventory.Examples.Items.Food.Abstract
         [field: SerializeField] public int MinHealthRestore { get; private set; }
         [field: SerializeField] public int MaxHealthRestore { get; private set; }
 
-        public sealed override void OnUse(in UseItemContext context)
+        public sealed override void OnUse(in UseItemContext context, OperationResult result)
         {
             // Get item data
             ItemData itemData = context.itemInstance.Data;

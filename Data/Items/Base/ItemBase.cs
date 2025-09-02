@@ -2,11 +2,13 @@
 using JetBrains.Annotations;
 using Systems.SimpleCore.Automation.Attributes;
 using Systems.SimpleCore.Identifiers;
+using Systems.SimpleCore.Operations;
 using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Data;
+using Systems.SimpleInventory.Operations;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Data.Items.Base
@@ -63,22 +65,22 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         /// Checks if item can be added to inventory
         /// </summary>
-        public bool CanAdd(in AddItemContext context) => true;
+        public OperationResult CanAdd(in AddItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be taken from inventory
         /// </summary>
-        public bool CanTake(in TakeItemContext context) => true;
+        public OperationResult CanTake(in TakeItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be dropped
         /// </summary>
-        public bool CanDrop(in DropItemContext context) => true;
+        public OperationResult CanDrop(in DropItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be transferred
         /// </summary>
-        public bool CanTransfer(in TransferItemContext context) => true;
+        public OperationResult CanTransfer(in TransferItemContext context) => InventoryOperations.Permitted();
 
 #endregion
 
@@ -87,74 +89,82 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         ///     Event called when item is picked up
         /// </summary>
-        /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickup(in PickupItemContext context)
+        protected internal virtual void OnPickup(in PickupItemContext context, in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Event called when item pickup fails
         /// </summary>
-        /// <param name="context">Context of the pickup event</param>
-        protected internal virtual void OnPickupFailed(in PickupItemContext context)
+        protected internal virtual void OnPickupFailed(
+            in PickupItemContext context,
+            in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Called when item is dropped
         /// </summary>
-        /// <param name="context">Context of the drop event</param>
-        protected internal virtual void OnDrop(in DropItemContext context)
+        protected internal virtual void OnDrop(in DropItemContext context, in OperationResult result)
         {
         }
 
         /// <summary>
         ///     Called when item drop fails
         /// </summary>
-        protected internal virtual void OnDropFailed(in DropItemContext context)
+        protected internal virtual void OnDropFailed(in DropItemContext context, in OperationResult result)
         {
         }
 
         /// <summary>
         ///     Called when item is added to inventory
         /// </summary>
-        protected internal virtual void OnAddToInventory(in AddItemContext context)
+        protected internal virtual void OnAddToInventory(in AddItemContext context, in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Called when item addition to inventory fails
         /// </summary>
-        protected internal virtual void OnAddToInventoryFailed(in AddItemContext context)
+        protected internal virtual void OnAddToInventoryFailed(
+            in AddItemContext context,
+            in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Called when item is taken from inventory
         /// </summary>
-        protected internal virtual void OnTakeFromInventory(in TakeItemContext context)
+        protected internal virtual void OnTakeFromInventory(
+            in TakeItemContext context,
+            in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Called when item removal from inventory fails
         /// </summary>
-        protected internal virtual void OnTakeFromInventoryFailed(in TakeItemContext context)
+        protected internal virtual void OnTakeFromInventoryFailed(
+            in TakeItemContext context,
+            in OperationResult<int> result)
         {
         }
 
         /// <summary>
         ///     Called when item is transferred
         /// </summary>
-        /// <param name="context">Context of the transfer event</param>
-        protected internal virtual void OnInventoryTransfer(in TransferItemContext context)
+        protected internal virtual void OnInventoryTransfer(
+            in TransferItemContext context,
+            in OperationResult result)
         {
         }
 
         /// <summary>
         ///     Called when item transfer fails
         /// </summary>
-        protected internal virtual void OnInventoryTransferFailed(in TransferItemContext context)
+        protected internal virtual void OnInventoryTransferFailed(
+            in TransferItemContext context,
+            in OperationResult result)
         {
         }
 
@@ -187,7 +197,8 @@ namespace Systems.SimpleInventory.Data.Items.Base
 
             // Call event for external actions
             if (actionSource == ActionSource.Internal) return;
-            itemObj.Item.OnDrop(new DropItemContext(null, itemObj, amount));
+            itemObj.Item.OnDrop(new DropItemContext(null, itemObj, amount), 
+                InventoryOperations.ItemsDropped());
         }
 
 

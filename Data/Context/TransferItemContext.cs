@@ -8,7 +8,7 @@ namespace Systems.SimpleInventory.Data.Context
     /// <summary>
     ///     Context for item transfer events - either within inventory or between inventories
     /// </summary>
-    public ref struct TransferItemContext
+    public readonly ref struct TransferItemContext
     {
         /// <summary>
         ///     Origin inventory
@@ -43,17 +43,17 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Amount of item being transferred
         /// </summary>
-        public int sourceAmount;
+        public readonly int sourceAmount;
 
         /// <summary>
         ///     Amount of item being transferred out
         /// </summary>
-        public int targetAmount;
+        public readonly int targetAmount;
 
         /// <summary>
         ///     Transfer flags
         /// </summary>
-        public ItemTransferFlags transferFlags;
+        public readonly ItemTransferFlags transferFlags;
 
         [CanBeNull] public InventorySlot SourceSlot =>
             sourceSlotIndex > 0 ? sourceInventory.GetSlotAt(sourceSlotIndex) : null;

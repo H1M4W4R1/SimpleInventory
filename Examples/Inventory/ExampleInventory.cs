@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using JetBrains.Annotations;
+using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
@@ -102,27 +103,27 @@ namespace Systems.SimpleInventory.Examples.Inventory
 
         }
 
-        protected override void OnItemAdded(in AddItemContext context)
+        protected override void OnItemAdded(in AddItemContext context, in OperationResult<int> result)
         {
-            base.OnItemAdded(in context);
+            base.OnItemAdded(in context,result);
             Debug.Log($"Item added: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemAddFailed(in AddItemContext context)
+        protected override void OnItemAddFailed(in AddItemContext context, in OperationResult<int> result)
         {
-            base.OnItemAddFailed(in context);
+            base.OnItemAddFailed(in context, result);
             Debug.Log($"Item add failed: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemTaken(in TakeItemContext context)
+        protected override void OnItemTaken(in TakeItemContext context, in OperationResult<int> result)
         {
-            base.OnItemTaken(in context);
+            base.OnItemTaken(in context, result);
             Debug.Log($"Item taken: {context.itemInstance.name}");
         }
 
-        protected override void OnItemTakeFailed(in TakeItemContext context)
+        protected override void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> result)
         {
-            base.OnItemTakeFailed(in context);
+            base.OnItemTakeFailed(in context, result);
             Debug.Log($"Item take failed: {context.itemInstance.name}");
         }
     }
