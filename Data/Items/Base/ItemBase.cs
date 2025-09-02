@@ -94,7 +94,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         ///     Event called when item is picked up
         /// </summary>
-        protected internal virtual void OnPickup(in PickupItemContext context, in OperationResult<int> result)
+        protected internal virtual void OnPickup(in PickupItemContext context, in OperationResult<int> resultAmountLeft)
         {
         }
 
@@ -103,7 +103,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnPickupFailed(
             in PickupItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountExpected)
         {
         }
 
@@ -117,14 +117,14 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         ///     Called when item drop fails
         /// </summary>
-        protected internal virtual void OnDropFailed(in DropItemContext context, in OperationResult result)
+        protected internal virtual void OnDropFailed(in DropItemContext context, in OperationResult resultAmountExpected)
         {
         }
 
         /// <summary>
         ///     Called when item is added to inventory
         /// </summary>
-        protected internal virtual void OnAddToInventory(in AddItemContext context, in OperationResult<int> result)
+        protected internal virtual void OnAddToInventory(in AddItemContext context, in OperationResult<int> resultAmountLeft)
         {
         }
 
@@ -133,7 +133,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnAddToInventoryFailed(
             in AddItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountExpected)
         {
         }
 
@@ -142,7 +142,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnTakeFromInventory(
             in TakeItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountLeft)
         {
         }
 
@@ -151,7 +151,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         protected internal virtual void OnTakeFromInventoryFailed(
             in TakeItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountExpected)
         {
         }
 

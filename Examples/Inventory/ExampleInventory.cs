@@ -103,27 +103,27 @@ namespace Systems.SimpleInventory.Examples.Inventory
 
         }
 
-        protected override void OnItemAdded(in AddItemContext context, in OperationResult<int> result)
+        protected override void OnItemAdded(in AddItemContext context, in OperationResult<int> resultAmountLeft)
         {
-            base.OnItemAdded(in context,result);
+            base.OnItemAdded(in context,resultAmountLeft);
             Debug.Log($"Item added: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemAddFailed(in AddItemContext context, in OperationResult<int> result)
+        protected override void OnItemAddFailed(in AddItemContext context, in OperationResult<int> resultAmountExpected)
         {
-            base.OnItemAddFailed(in context, result);
+            base.OnItemAddFailed(in context, resultAmountExpected);
             Debug.Log($"Item add failed: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemTaken(in TakeItemContext context, in OperationResult<int> result)
+        protected override void OnItemTaken(in TakeItemContext context, in OperationResult<int> resultAmountLeft)
         {
-            base.OnItemTaken(in context, result);
+            base.OnItemTaken(in context, resultAmountLeft);
             Debug.Log($"Item taken: {context.itemInstance.name}");
         }
 
-        protected override void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> result)
+        protected override void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> resultAmountExpected)
         {
-            base.OnItemTakeFailed(in context, result);
+            base.OnItemTakeFailed(in context, resultAmountExpected);
             Debug.Log($"Item take failed: {context.itemInstance.name}");
         }
     }

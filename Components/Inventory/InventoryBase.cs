@@ -1251,9 +1251,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         protected internal virtual void OnItemPickedUp(
             in PickupItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountLeft)
         {
-            context.pickupSource.ItemInstance.Item.OnPickup(context, result);
+            context.pickupSource.ItemInstance.Item.OnPickup(context, resultAmountLeft);
         }
 
         /// <summary>
@@ -1261,9 +1261,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         protected internal virtual void OnItemPickupFailed(
             in PickupItemContext context,
-            in OperationResult<int> result)
+            in OperationResult<int> resultAmountExpected)
         {
-            context.pickupSource.ItemInstance.Item.OnPickupFailed(context, result);
+            context.pickupSource.ItemInstance.Item.OnPickupFailed(context, resultAmountExpected);
         }
 
         /// <summary>
@@ -1277,9 +1277,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Called when item drop fails
         /// </summary>
-        protected virtual void OnItemDropFailed(in DropItemContext context, in OperationResult result)
+        protected virtual void OnItemDropFailed(in DropItemContext context, in OperationResult resultAmountExpected)
         {
-            context.itemInstance.Item.OnDropFailed(context, result);
+            context.itemInstance.Item.OnDropFailed(context, resultAmountExpected);
         }
 
         /// <summary>
@@ -1301,33 +1301,33 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Called when item is added to inventory
         /// </summary>
-        protected virtual void OnItemAdded(in AddItemContext context, in OperationResult<int> result)
+        protected virtual void OnItemAdded(in AddItemContext context, in OperationResult<int> resultAmountLeft)
         {
-            context.itemInstance.Item.OnAddToInventory(context, result);
+            context.itemInstance.Item.OnAddToInventory(context, resultAmountLeft);
         }
 
         /// <summary>
         ///     Called when item addition fails
         /// </summary>
-        protected virtual void OnItemAddFailed(in AddItemContext context, in OperationResult<int> result)
+        protected virtual void OnItemAddFailed(in AddItemContext context, in OperationResult<int> resultAmountExpected)
         {
-            context.itemInstance.Item.OnAddToInventoryFailed(context, result);
+            context.itemInstance.Item.OnAddToInventoryFailed(context, resultAmountExpected);
         }
 
         /// <summary>
         ///     Called when item is taken from inventory
         /// </summary>
-        protected virtual void OnItemTaken(in TakeItemContext context, in OperationResult<int> result)
+        protected virtual void OnItemTaken(in TakeItemContext context, in OperationResult<int> resultAmountLeft)
         {
-            context.itemInstance.OnTakeFromInventory(context, result);
+            context.itemInstance.OnTakeFromInventory(context, resultAmountLeft);
         }
 
         /// <summary>
         ///     Called when item take fails
         /// </summary>
-        protected virtual void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> result)
+        protected virtual void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> resultAmountExpected)
         {
-            context.itemInstance.OnTakeFromInventoryFailed(context, result);
+            context.itemInstance.OnTakeFromInventoryFailed(context, resultAmountExpected);
         }
 
         /// <summary>
