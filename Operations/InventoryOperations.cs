@@ -35,6 +35,7 @@ namespace Systems.SimpleInventory.Operations
         public static OperationResult ItemsTaken() => OperationResult.GenericSuccess;
         public static OperationResult ItemsTransferred() => OperationResult.GenericSuccess;
         public static OperationResult ItemsDropped() => OperationResult.GenericSuccess;
+        public static OperationResult ItemsPickedUp() => OperationResult.GenericSuccess;
         
         public static OperationResult Permitted() => OperationResult.GenericSuccess;
 #region Equipment

@@ -1,4 +1,4 @@
-﻿using Systems.SimpleInventory.Data.Context;
+﻿using Systems.SimpleCore.Operations;
 
 namespace Systems.SimpleInventory.Components.Items.Pickup
 {
@@ -8,7 +8,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
     // ReSharper disable once ClassCanBeSealed.Global
     public class PickupItemWithDestroy : PickupItem
     {
-        protected internal override void OnPickupAttemptComplete(in PickupItemContext context)
+        protected internal override void OnPickupAttemptComplete(in OperationResult<int> amountLeft)
         {
             if (Amount != 0) return;
             Destroy(gameObject);

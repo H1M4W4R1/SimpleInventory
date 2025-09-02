@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Components.Inventory;
-using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
 using UnityEngine;
 
@@ -16,7 +15,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         ///     Item that can be picked up
         /// </summary>
         [field: SerializeReference] public WorldItem ItemInstance { get; private set; }
-        
+
         /// <summary>
         ///     Amount of items that can can be picked up from this item
         /// </summary>
@@ -32,40 +31,25 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
             ItemInstance = item;
             Amount = amount;
         }
-        
+
         /// <summary>
         ///     Picks up item
         /// </summary>
         /// <param name="toInventory">Inventory to pick up item to</param>
         public virtual void Pickup([NotNull] InventoryBase toInventory)
         {
-            // Perform
-            OperationResult<int> amountLeft = toInventory.TryAdd(ItemInstance, Amount);
-            int pickedUpAmount = Amount - (int) amountLeft;
-            
-            // Create context of operation
-            PickupItemContext context = new(this, toInventory, pickedUpAmount);
-            
-            // Call inventory and item picked up events
-            if (pickedUpAmount > 0)
-            {
-                toInventory.OnItemPickedUp(context, amountLeft);
-            }
-            else
-            {
-                toInventory.OnItemPickupFailed(context, amountLeft);
-            }
+            OperationResult<int> amountLeft = toInventory.PickupItem(this, Amount);
+            if (!amountLeft) return;
 
             // Pickup was performed, update amount and check object events for re-pooling or destroy
             Amount = (int) amountLeft;
-            OnPickupAttemptComplete(context);
+            OnPickupAttemptComplete(amountLeft);
         }
 
         /// <summary>
         ///     Handles pickup performed, intended to be used for re-pooling or destroying the object,
         ///     can also trigger UI events when amount of picked up items is 0 to draw "Inventory full" message
         /// </summary>
-        /// <param name="context">Context of pickup</param>
-        protected internal abstract void OnPickupAttemptComplete(in PickupItemContext context);
+        protected internal abstract void OnPickupAttemptComplete(in OperationResult<int> amountLeft);
     }
 }

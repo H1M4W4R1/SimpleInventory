@@ -1,5 +1,6 @@
 ﻿using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Data.Context;
+using Systems.SimpleInventory.Operations;
 
 namespace Systems.SimpleInventory.Data.Items.Base
 {
@@ -13,7 +14,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of the usage</param>
         /// <returns>True if the item can be used, false otherwise</returns>
-        public virtual OperationResult CanUse(in UseItemContext context) => OperationResult.GenericSuccess;
+        public virtual OperationResult CanUse(in UseItemContext context) => InventoryOperations.Permitted();
         
         /// <summary>
         ///     Called when the item is used.

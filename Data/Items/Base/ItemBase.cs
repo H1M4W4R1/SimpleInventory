@@ -63,6 +63,11 @@ namespace Systems.SimpleInventory.Data.Items.Base
 #region Checks
 
         /// <summary>
+        ///     Checks if item can be picked up
+        /// </summary>
+        public OperationResult CanPickup(in PickupItemContext context) => InventoryOperations.Permitted();
+        
+        /// <summary>
         /// Checks if item can be added to inventory
         /// </summary>
         public OperationResult CanAdd(in AddItemContext context) => InventoryOperations.Permitted();

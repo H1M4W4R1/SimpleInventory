@@ -336,8 +336,48 @@ namespace Systems.SimpleInventory.Components.Inventory
 
 #endregion
 
-#region Item dropping
+#region Item dropping and pickup
 
+        public OperationResult<int> TryPickupItem([NotNull] PickupItem pickup, int amount,
+            ActionSource actionSource = ActionSource.External)
+        {
+            // Check if we can pickup specified amount of item
+            PickupItemContext context = new(pickup, this, amount);
+            OperationResult<int> result = CanPickupItem(context).WithData(amount);
+            if (!result)
+            {
+                if (actionSource == ActionSource.Internal) return result;
+                OnItemPickupFailed(context, result);
+                return result;
+            }
+
+            return PickupItem(pickup, amount);
+         
+        }
+
+        public OperationResult<int> PickupItem([NotNull] PickupItem pickup, int amount,
+            ActionSource actionSource = ActionSource.External)
+        {
+            PickupItemContext context = new(pickup, this, amount);
+            
+            // Perform
+            OperationResult<int> amountLeft = TryAdd(pickup.ItemInstance, amount);
+            int pickedUpAmount = pickup.Amount - (int) amountLeft;
+
+            // Call inventory and item picked up events
+            if (pickedUpAmount > 0)
+            {
+                if (actionSource == ActionSource.Internal) 
+                    return InventoryOperations.ItemsPickedUp().WithData(pickedUpAmount);
+                OnItemPickedUp(context, amountLeft);
+                return InventoryOperations.ItemsPickedUp().WithData(pickedUpAmount);
+            }
+
+            if (actionSource == ActionSource.Internal) return amountLeft;
+            OnItemPickupFailed(context, amountLeft);
+            return amountLeft;
+        }
+        
         /// <summary>
         ///     Drops item as pickup object
         /// </summary>
@@ -495,6 +535,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 OnItemTransferFailed(itemTransferContext, sourceInventoryOperationResult);
                 return sourceInventoryOperationResult;
             }
+
             if (!targetInventoryOperationResult)
             {
                 if (actionSource == ActionSource.Internal) return targetInventoryOperationResult;
@@ -752,7 +793,7 @@ namespace Systems.SimpleInventory.Components.Inventory
                 // Check if all items were added
                 if (amountToAdd <= 0) break;
             }
-       
+
             // Call events
             if (actionSource == ActionSource.Internal)
                 return InventoryOperations.ItemsAdded().WithData(amountToAdd);
@@ -1080,6 +1121,12 @@ namespace Systems.SimpleInventory.Components.Inventory
 #region Checks
 
         /// <summary>
+        ///     Checks if item can be picked up
+        /// </summary>
+        public virtual OperationResult CanPickupItem(PickupItemContext checkContext) =>
+            checkContext.pickupSource.ItemInstance.Item.CanPickup(checkContext);
+
+        /// <summary>
         ///     Checks if item can be added to inventory
         /// </summary>
         public virtual OperationResult CanAddItem(AddItemContext context)
@@ -1135,12 +1182,13 @@ namespace Systems.SimpleInventory.Components.Inventory
                 OperationResult canTransferResult = context.sourceItem.Item.CanTransfer(context);
                 if (!canTransferResult) return canTransferResult;
             }
+
             if (context.targetItem is not null)
             {
                 OperationResult canTransferResult = context.targetItem.Item.CanTransfer(context);
                 if (!canTransferResult) return canTransferResult;
             }
-            
+
             // Handle separate case for stupid multi-slot transfers
             if (context.IsMultiSlotTransfer)
             {
@@ -1159,8 +1207,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             }
 
             // If any slot is empty we can simply swap them, if both are empty then too
-            if (context.sourceItem is null || context.targetItem is null)
-                return InventoryOperations.Permitted();
+            if (context.sourceItem is null || context.targetItem is null) return InventoryOperations.Permitted();
 
             // Same-item check should be done only on source inventory side
             // to improve performance
@@ -1168,8 +1215,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Check if same item, if not then we can easily swap those items unless
             // some other logic is overriding this behaviour.
-            if (!Equals(context.sourceItem.Item, context.targetItem.Item))
-                return InventoryOperations.Permitted();
+            if (!Equals(context.sourceItem.Item, context.targetItem.Item)) return InventoryOperations.Permitted();
 
             // Check if items are designed to be swapped, if so then we can easily
             // perform the swap unless some other logic is overriding this behaviour.
@@ -1203,7 +1249,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Called when item is picked up
         /// </summary>
-        protected internal virtual void OnItemPickedUp(in PickupItemContext context, in OperationResult<int> result)
+        protected internal virtual void OnItemPickedUp(
+            in PickupItemContext context,
+            in OperationResult<int> result)
         {
             context.pickupSource.ItemInstance.Item.OnPickup(context, result);
         }
@@ -1211,7 +1259,9 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Called when item pickup fails
         /// </summary>
-        protected internal virtual void OnItemPickupFailed(in PickupItemContext context, in OperationResult<int> result)
+        protected internal virtual void OnItemPickupFailed(
+            in PickupItemContext context,
+            in OperationResult<int> result)
         {
             context.pickupSource.ItemInstance.Item.OnPickupFailed(context, result);
         }

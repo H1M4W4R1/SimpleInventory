@@ -1,5 +1,6 @@
 ﻿using Systems.SimpleCore.Operations;
 using Systems.SimpleInventory.Data.Context;
+using Systems.SimpleInventory.Operations;
 
 namespace Systems.SimpleInventory.Data.Items.Base
 {
@@ -29,14 +30,14 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be equipped, false otherwise</returns>
-        public virtual OperationResult CanEquip(in EquipItemContext context) => OperationResult.GenericSuccess;
+        public virtual OperationResult CanEquip(in EquipItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if the item can be unequipped.
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be unequipped, false otherwise</returns>
-        public virtual OperationResult CanUnequip(in UnequipItemContext context) => OperationResult.GenericSuccess;
+        public virtual OperationResult CanUnequip(in UnequipItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Called when the item is equipped.
