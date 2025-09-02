@@ -105,25 +105,25 @@ namespace Systems.SimpleInventory.Examples.Inventory
         protected override void OnItemAdded(in AddItemContext context)
         {
             base.OnItemAdded(in context);
-            Debug.Log($"Item added: {context.item.Item.name}");
+            Debug.Log($"Item added: {context.itemInstance.Item.name}");
         }
 
         protected override void OnItemAddFailed(in AddItemContext context)
         {
             base.OnItemAddFailed(in context);
-            Debug.Log($"Item add failed: {context.item.Item.name}");
+            Debug.Log($"Item add failed: {context.itemInstance.Item.name}");
         }
 
         protected override void OnItemTaken(in TakeItemContext context)
         {
             base.OnItemTaken(in context);
-            Debug.Log($"Item taken: {context.item.name}");
+            Debug.Log($"Item taken: {context.itemInstance.name}");
         }
 
         protected override void OnItemTakeFailed(in TakeItemContext context)
         {
             base.OnItemTakeFailed(in context);
-            Debug.Log($"Item take failed: {context.item.name}");
+            Debug.Log($"Item take failed: {context.itemInstance.name}");
         }
     }
 }

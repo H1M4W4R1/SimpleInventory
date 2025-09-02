@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Inventory;
+using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Base;
 using UnityEngine.Assertions;
@@ -33,23 +34,50 @@ namespace Systems.SimpleInventory.Data.Context
         public readonly EquipmentBase equipment;
         
         /// <summary>
-        ///     If true, item will be added to inventory before unequipping,
-        ///     may be drooped if <see cref="inventory"/> is null
+        ///     Flags for modifying action
         /// </summary>
-        public readonly bool addToInventory;
+        public readonly EquipmentModificationFlags flags;
+        
+        /// <summary>
+        ///     Result of unequipping item
+        /// </summary>
+        public readonly UnequipItemResult reason;
+
+        public UnequipItemContext WithReason(UnequipItemResult newReason)
+        {
+            return new UnequipItemContext(inventory, equipment, item, itemBase, flags, newReason);
+        }
         
         public UnequipItemContext(
             [CanBeNull] InventoryBase inventory,
             [NotNull] EquipmentBase equipment,
             [NotNull] WorldItem item,
-            bool addToInventory = true)
+            EquipmentModificationFlags flags = EquipmentModificationFlags.None,
+            UnequipItemResult reason = UnequipItemResult.UnequippedSuccessfully)
         {
             this.inventory = inventory;
             this.equipment = equipment;
             this.item = item;
             itemBase = item.Item as EquippableItemBase;
-            this.addToInventory = addToInventory;
+            this.flags = flags;
+            this.reason = reason;
             Assert.IsNotNull(itemBase, "Item is not equippable");
+        }
+        
+        private UnequipItemContext(
+            [CanBeNull] InventoryBase inventory,
+            [NotNull] EquipmentBase equipment,
+            WorldItem item,
+            EquippableItemBase itemBase,
+            EquipmentModificationFlags flags,
+            UnequipItemResult reason)
+        {
+            this.inventory = inventory;
+            this.equipment = equipment;
+            this.item = item;
+            this.itemBase = itemBase;
+            this.flags = flags;
+            this.reason = reason;
         }
     }
 }

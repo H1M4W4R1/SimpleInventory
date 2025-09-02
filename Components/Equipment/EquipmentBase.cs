@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
@@ -302,36 +303,50 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <param name="flags">Flags for modifying action</param>
+        /// <param name="actionSource">Action source</param>
         /// <returns>Result of action</returns>
         internal EquipItemResult Equip(
             in EquipItemContext context,
             EquipmentModificationFlags flags =
-                EquipmentModificationFlags.None)
+                EquipmentModificationFlags.None,
+            ActionSource actionSource = ActionSource.External)
         {
             EquippableItemBase equippableItemRef = context.itemBase;
-            
+
             // Check if already equipped
             if (equippableItemRef.IsEquipped(context))
             {
-                OnItemAlreadyEquipped(context);
+                if (actionSource == ActionSource.Internal) return EquipItemResult.AlreadyEquipped;
+                OnItemAlreadyEquipped(context.WithReason(EquipItemResult.AlreadyEquipped));
                 return EquipItemResult.AlreadyEquipped;
             }
 
             // Check if item can be equipped
             if (!CanEquip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
-                OnItemCannotBeEquipped(context);
+                if (actionSource == ActionSource.Internal) return EquipItemResult.NotAllowed;
+                OnItemCannotBeEquipped(context.WithReason(EquipItemResult.NotAllowed));
                 return EquipItemResult.NotAllowed;
             }
 
             // Find first empty slot we can equip item to
-            EquipmentSlot slot = context.allowReplace
+            EquipmentSlot slot = (context.flags & EquipmentModificationFlags.AllowItemSwap) != 0
                 ? GetFreeOrSwapSlot(context.item)
                 : GetFreeSlot(context.item);
-            if (slot == null) return EquipItemResult.NoFreeSlots;
+            if (slot == null)
+            {
+                if (actionSource == ActionSource.Internal) return EquipItemResult.NoFreeSlots;
+                OnItemCannotBeEquipped(context.WithReason(EquipItemResult.NoFreeSlots));
+                return EquipItemResult.NoFreeSlots;
+            }
 
             // Sanity check for same item
-            if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item)) return EquipItemResult.AlreadyEquipped;
+            if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
+            {
+                if (actionSource == ActionSource.Internal) return EquipItemResult.AlreadyEquipped;
+                OnItemAlreadyEquipped(context.WithReason(EquipItemResult.AlreadyEquipped));
+                return EquipItemResult.AlreadyEquipped;
+            }
 
             // Unequip item if was already equipped
             if (!ReferenceEquals(slot.CurrentlyEquippedItem, null))
@@ -353,11 +368,13 @@ namespace Systems.SimpleInventory.Components.Equipment
             slot.EquipItem(context.item);
 
             // Take item from inventory silently (if needed)
-            if (context.removeFromInventory && context.slot.inventory is not null)
-                context.slot.inventory.Take(context.slot.slotIndex, InventoryActionSource.Internal);
+            if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0 &&
+                context.slot.inventory is not null)
+                context.slot.inventory.Take(context.slot.slotIndex, ActionSource.Internal);
 
             // Call events
-            OnItemEquipped(context);
+            if (actionSource == ActionSource.Internal) return EquipItemResult.EquippedSuccessfully;
+            OnItemEquipped(context.WithReason(EquipItemResult.EquippedSuccessfully));
             return EquipItemResult.EquippedSuccessfully;
         }
 
@@ -366,35 +383,45 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <param name="flags">Flags for modifying action</param>
+        /// <param name="actionSource">Source of action</param>
         /// <returns>Result of action</returns>
-        internal UnequipItemResult Unequip(in UnequipItemContext context,
+        internal UnequipItemResult Unequip(
+            in UnequipItemContext context,
             EquipmentModificationFlags flags =
-                EquipmentModificationFlags.None)
+                EquipmentModificationFlags.None,
+            ActionSource actionSource = ActionSource.External)
         {
             EquippableItemBase equippableItemRef = context.itemBase;
 
             // Check if already unequipped
             if (!equippableItemRef.IsEquipped(context))
             {
-                OnItemAlreadyUnequipped(context);
+                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
+                OnItemAlreadyUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
                 return UnequipItemResult.NotEquipped;
             }
 
             // Check if item can be unequipped
             if (!CanUnequip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
-                OnItemCannotBeUnequipped(context);
+                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotAllowed;
+                OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotAllowed));
                 return UnequipItemResult.NotAllowed;
             }
 
             // Get item to unequip
             EquipmentSlot slot = GetFirstEquippedSlot(context.item);
-            if (slot == null) return UnequipItemResult.NotEquipped;
+            if (slot == null)
+            {
+                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
+                OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
+                return UnequipItemResult.NotEquipped;
+            }
 
             // Add item to inventory if needed
-            if (context.addToInventory && context.inventory is not null)
-                context.inventory.TryAddOrDrop(context.item, 1, InventoryActionSource.Internal);
-            else if (context.addToInventory)
+            if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0 && context.inventory is not null)
+                context.inventory.TryAddOrDrop(context.item, 1, ActionSource.Internal);
+            else if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0)
             {
                 Transform objTransform = ReferenceEquals(DropPositionFallback, null)
                     ? transform
@@ -408,7 +435,8 @@ namespace Systems.SimpleInventory.Components.Equipment
                 "Something went wrong while unequipping item, this should never happen");
 
             // Call events
-            OnItemUnequipped(context);
+            if (actionSource == ActionSource.Internal) return UnequipItemResult.UnequippedSuccessfully;
+            OnItemUnequipped(context.WithReason(UnequipItemResult.UnequippedSuccessfully));
             return UnequipItemResult.UnequippedSuccessfully;
         }
 

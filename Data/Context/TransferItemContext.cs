@@ -67,13 +67,13 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Checks if transfer is from specified inventory
         /// </summary>
-        public bool IsSource([NotNull] InventoryBase inventory)
+        public readonly bool IsSource([NotNull] InventoryBase inventory)
             => ReferenceEquals(sourceInventory, inventory);
 
         /// <summary>
         ///     Checks if transfer is to specified inventory
         /// </summary>
-        public bool IsTarget([NotNull] InventoryBase inventory)
+        public readonly bool IsTarget([NotNull] InventoryBase inventory)
             => ReferenceEquals(targetInventory, inventory);
 
         /// <summary>

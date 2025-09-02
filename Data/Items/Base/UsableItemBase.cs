@@ -19,5 +19,11 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of the usage</param>
         public abstract void OnUse(in UseItemContext context);
+
+        /// <summary>
+        ///     Called when the item usage fails.
+        /// </summary>
+        /// <param name="context">Context of the usage</param>
+        protected internal virtual void OnUseFailed(in UseItemContext context) {}
     }
 }

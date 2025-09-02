@@ -2,6 +2,7 @@
 using Systems.SimpleInventory.Components.Equipment;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Context.Internal;
+using Systems.SimpleInventory.Data.Enums;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Base;
 using UnityEngine.Assertions;
@@ -17,7 +18,7 @@ namespace Systems.SimpleInventory.Data.Context
         ///     Slot that contains item to equip
         /// </summary>
         public readonly InventorySlotContext slot;
-        
+
         /// <summary>
         ///     Item being equipped
         /// </summary>
@@ -26,37 +27,58 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Reference to item base for easier handling
         /// </summary>
-        public readonly EquippableItemBase itemBase; 
-        
+        public readonly EquippableItemBase itemBase;
+
         /// <summary>
         ///     Equipment where item is being equipped
         /// </summary>
         public readonly EquipmentBase equipment;
-        
+
         /// <summary>
-        ///     Allow replacing already equipped item
+        ///     Flags for modifying action
         /// </summary>
-        public readonly bool allowReplace;
-        
+        public readonly EquipmentModificationFlags flags;
+
         /// <summary>
-        ///     Remove item from inventory after equipping
+        ///     Result of equipping item
         /// </summary>
-        public readonly bool removeFromInventory;
+        public readonly EquipItemResult reason;
+
+        public EquipItemContext WithReason(EquipItemResult newReason)
+        {
+            return new EquipItemContext(equipment, slot, item, itemBase, flags, newReason);
+        }
 
         public EquipItemContext(
             [NotNull] EquipmentBase equipment,
             [NotNull] InventoryBase inventory,
             int slotIndex,
-            bool allowReplace = false,
-            bool removeFromInventory = true)
+            EquipmentModificationFlags flags,
+            EquipItemResult reason = EquipItemResult.EquippedSuccessfully)
         {
             this.equipment = equipment;
             slot = new InventorySlotContext(inventory, slotIndex);
             item = slot.Item;
             itemBase = item?.Item as EquippableItemBase;
-            this.allowReplace = allowReplace;
-            this.removeFromInventory = removeFromInventory;
+            this.flags = flags;
+            this.reason = reason;
             Assert.IsNotNull(itemBase, "Item is not equippable");
+        }
+
+        private EquipItemContext(
+            [NotNull] EquipmentBase equipment,
+            InventorySlotContext slot,
+            WorldItem item,
+            EquippableItemBase itemBase,
+            EquipmentModificationFlags flags,
+            EquipItemResult reason = EquipItemResult.EquippedSuccessfully)
+        {
+            this.equipment = equipment;
+            this.slot = slot;
+            this.item = item;
+            this.itemBase = itemBase;
+            this.flags = flags;
+            this.reason = reason;
         }
     }
 }

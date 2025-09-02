@@ -2,6 +2,8 @@
 {
     public enum EquipItemResult
     {
+        Unknown,
+        
         /// <summary>
         ///     When slot index is invalid
         /// </summary>

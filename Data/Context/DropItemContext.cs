@@ -17,17 +17,17 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being dropped
         /// </summary>
-        [NotNull] public readonly WorldItem item;
+        [NotNull] public readonly WorldItem itemInstance;
         
         /// <summary>
         ///     Amount of item being dropped
         /// </summary>
         public readonly int amount;
 
-        public DropItemContext([CanBeNull] InventoryBase inventory, [NotNull] WorldItem item, int amount)
+        public DropItemContext([CanBeNull] InventoryBase inventory, [NotNull] WorldItem itemInstance, int amount)
         {
             this.inventory = inventory;
-            this.item = item;
+            this.itemInstance = itemInstance;
             this.amount = amount;
         }
     }

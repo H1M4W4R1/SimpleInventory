@@ -8,7 +8,7 @@ namespace Systems.SimpleInventory.Data.Context
     public readonly ref struct TakeItemContext
     {
         [CanBeNull] public readonly WorldItem exactItem;
-        [NotNull] public readonly ItemBase item;
+        [NotNull] public readonly ItemBase itemInstance;
         [NotNull] public readonly InventoryBase inventory;
         public readonly int amount;
 
@@ -18,18 +18,18 @@ namespace Systems.SimpleInventory.Data.Context
             int amount)
         {
             this.exactItem = exactItem;
-            item = exactItem.Item;
+            itemInstance = exactItem.Item;
             this.inventory = inventory;
             this.amount = amount;
         }
         
         public TakeItemContext(
-            [NotNull] ItemBase item,
+            [NotNull] ItemBase itemInstance,
             [NotNull] InventoryBase inventory,
             int amount)
         {
             exactItem = null;
-            this.item = item;
+            this.itemInstance = itemInstance;
             this.inventory = inventory;
             this.amount = amount;
         }

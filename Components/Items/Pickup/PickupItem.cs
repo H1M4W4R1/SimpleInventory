@@ -14,7 +14,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// <summary>
         ///     Item that can be picked up
         /// </summary>
-        [field: SerializeReference] public WorldItem Item { get; private set; }
+        [field: SerializeReference] public WorldItem ItemInstance { get; private set; }
         
         /// <summary>
         ///     Amount of items that can can be picked up from this item
@@ -28,7 +28,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// <param name="amount">Amount of items to drop</param>
         internal void SetData([NotNull] WorldItem item, int amount)
         {
-            Item = item;
+            ItemInstance = item;
             Amount = amount;
         }
         
@@ -39,7 +39,7 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         public virtual void Pickup([NotNull] InventoryBase toInventory)
         {
             // Perform
-            int amountLeft = toInventory.TryAdd(Item, Amount);
+            int amountLeft = toInventory.TryAdd(ItemInstance, Amount);
             int pickedUpAmount = Amount - amountLeft;
             
             // Create context of operation
@@ -49,12 +49,12 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
             if (pickedUpAmount > 0)
             {
                 toInventory.OnItemPickedUp(context);
-                Item.Item.OnPickup(context);
+                ItemInstance.Item.OnPickup(context);
             }
             else
             {
                 toInventory.OnItemPickupFailed(context);
-                Item.Item.OnPickupFailed(context);
+                ItemInstance.Item.OnPickupFailed(context);
             }
 
             // Pickup was performed, update amount and check object events for re-pooling or destroy

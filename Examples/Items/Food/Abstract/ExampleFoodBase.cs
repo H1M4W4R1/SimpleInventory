@@ -16,10 +16,10 @@ namespace Systems.SimpleInventory.Examples.Items.Food.Abstract
         public sealed override void OnUse(in UseItemContext context)
         {
             // Get item data
-            ItemData itemData = context.item.Data;
+            ItemData itemData = context.itemInstance.Data;
             if (itemData is not FoodData foodData)
             {
-                Debug.LogError($"Item {context.item} is not food - item data is not valid");
+                Debug.LogError($"Item {context.itemInstance} is not food - item data is not valid");
                 return;
             }
             

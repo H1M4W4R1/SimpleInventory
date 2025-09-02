@@ -1,6 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Automation.Attributes;
+using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
@@ -149,14 +150,14 @@ namespace Systems.SimpleInventory.Data.Items.Base
         ///     Called when item is transferred
         /// </summary>
         /// <param name="context">Context of the transfer event</param>
-        protected internal virtual void OnTransfer(in TransferItemContext context)
+        protected internal virtual void OnInventoryTransfer(in TransferItemContext context)
         {
         }
 
         /// <summary>
         ///     Called when item transfer fails
         /// </summary>
-        protected internal virtual void OnTransferFailed(in TransferItemContext context)
+        protected internal virtual void OnInventoryTransferFailed(in TransferItemContext context)
         {
         }
 
@@ -173,19 +174,22 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <param name="position">Position to drop item at</param>
         /// <param name="rotation">Rotation of dropped item</param>
         /// <param name="parent">Parent of dropped item</param>
+        /// <param name="actionSource">Source of action</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         public static void DropItem<TPickupItemType>(
             [NotNull] WorldItem itemObj,
             int amount,
             in Vector3 position,
             in Quaternion rotation,
-            [CanBeNull] Transform parent = null)
+            [CanBeNull] Transform parent = null,
+            ActionSource actionSource = ActionSource.External)
             where TPickupItemType : PickupItem, new()
         {
             // Spawn pickup
             itemObj.Item.SpawnPickup<TPickupItemType>(itemObj, amount, position, rotation, parent);
 
-            // Call event
+            // Call event for external actions
+            if (actionSource == ActionSource.Internal) return;
             itemObj.Item.OnDrop(new DropItemContext(null, itemObj, amount));
         }
 
@@ -199,6 +203,10 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <param name="rotation">Rotation of dropped item</param>
         /// <param name="parent">Parent of dropped item</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
+        /// <remarks>
+        ///     Does not call <see cref="OnDrop"/>, see <see cref="DropItem{TPickupItemType}"/>
+        ///     if you want to call it after item was dropped.
+        /// </remarks>
         internal void SpawnPickup<TPickupItemType>(
             [NotNull] WorldItem itemObj,
             int amount,

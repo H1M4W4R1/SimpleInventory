@@ -2,6 +2,8 @@
 {
     public enum UnequipItemResult
     {
+        Unknown,
+        
         /// <summary>
         ///     When slot index is invalid
         /// </summary>

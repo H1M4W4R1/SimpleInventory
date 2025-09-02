@@ -20,13 +20,19 @@ namespace Systems.SimpleInventory.Data.Context
         /// <summary>
         ///     Item being used
         /// </summary>
-        public readonly WorldItem item;
+        public readonly WorldItem itemInstance;
+
+        /// <summary>
+        ///     Item base that is being used
+        /// </summary>
+        public readonly UsableItemBase itemBase;
 
         public UseItemContext([NotNull] InventoryBase inventory, int slotIndex)
         {
             slot = new InventorySlotContext(inventory, slotIndex);
-            item = slot.Item;
-            Assert.IsTrue(item?.Item is UsableItemBase, "Item is not usable");
+            itemInstance = slot.Item;
+            itemBase = itemInstance?.Item as UsableItemBase;
+            Assert.IsNotNull(itemBase, "Item is not usable");
         }
     }
 }
