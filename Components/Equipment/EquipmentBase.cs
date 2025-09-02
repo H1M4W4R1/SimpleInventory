@@ -25,7 +25,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         private Transform DropPositionFallback { get; set; }
 
         // ReSharper disable once CollectionNeverUpdated.Global
-        internal readonly List<EquipmentSlot> equipmentSlots = new();
+        internal readonly List<EquipmentSlotBase> equipmentSlots = new();
 
         private void Awake()
         {
@@ -40,18 +40,23 @@ namespace Systems.SimpleInventory.Components.Equipment
         ///     Must be called to build equipment slots
         /// </summary>
         /// <remarks>
-        ///     You should add <see cref="EquipmentSlot{TItemType}"/> to <see cref="equipmentSlots"/> using
+        ///     You should add <see cref="EquipmentSlotBase{TItemType}"/> to <see cref="equipmentSlots"/> using
         ///     <see cref="AddEquipmentSlotFor{TItemType}"/> method.
         ///     Clear list before adding any equipment slots to support multiple calls to this method.
         /// </remarks>
         protected abstract void BuildEquipmentSlots();
-
+        
         /// <summary>
         ///     Adds equipment slot for specific item type.
         /// </summary>
         /// <typeparam name="TItemType">Item type</typeparam>
         protected void AddEquipmentSlotFor<TItemType>()
             where TItemType : EquippableItemBase => equipmentSlots.Add(new EquipmentSlot<TItemType>());
+
+        /// <summary>
+        ///     Adds custom equipment slot.
+        /// </summary>
+        protected void AddEquipmentSlot(EquipmentSlotBase slot) => equipmentSlots.Add(slot);
 
         /// <summary>
         ///     Removes all equipment slots (does not recover items)
@@ -80,7 +85,75 @@ namespace Systems.SimpleInventory.Components.Equipment
         }
 
         /// <summary>
-        ///     Removes equipment slot for specific item type
+        ///     Removes equipment slot
+        /// </summary>
+        /// <param name="slot">Slot to remove</param>
+        /// <param name="inventory">Inventory to add item to</param>
+        /// <param name="flags">Flags for unequip operation</param>
+        protected void RemoveEquipmentSlot(
+            [NotNull] EquipmentSlotBase slot,
+            [CanBeNull] InventoryBase inventory = null,
+            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory |
+                                               EquipmentModificationFlags.IgnoreConditions)
+        {
+            // Check if slot is empty, if not handle item unequip or drop
+            if (slot.CurrentlyEquippedItem is not null)
+            {
+                if (inventory is not null)
+                {
+                    // Create context, we must modify inventory to automatically drop item
+                    // and ignore conditions to allow unequipping
+                    UnequipItemContext context = new(inventory, this,
+                        slot.CurrentlyEquippedItem, flags, UnequipItemResult.Unknown);
+
+                    // Unequip item, will automatically drop item if it can't be added to inventory
+                    // This still should trigger unequip events
+                    UnequipFromSlot(slot, context);
+                }
+                else
+                {
+                    // Drop item
+                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
+                        ? transform
+                        : DropPositionFallback;
+                    ItemBase.DropItem<PickupItemWithDestroy>(slot.CurrentlyEquippedItem,
+                        1, objTransform.position, objTransform.rotation);
+                }
+            }
+
+            // Remove slot
+            equipmentSlots.Remove(slot);
+        }
+
+        /// <summary>
+        ///     Removes FIRST equipment slot of specific type
+        /// </summary>
+        /// <typeparam name="TSlotType">Type of slot to remove</typeparam>
+        protected void RemoveEquipmentSlot<TSlotType>([CanBeNull] InventoryBase inventory = null)
+            where TSlotType : EquipmentSlotBase
+        {
+            // Remove slots that are empty
+            for (int i = equipmentSlots.Count - 1; i >= 0; i--)
+            {
+                EquipmentSlotBase slot = equipmentSlots[i];
+                if (slot is not TSlotType) continue;
+                if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
+                RemoveEquipmentSlot(slot, inventory);
+                return;
+            }
+
+            // Remove slots with items
+            for (int i = equipmentSlots.Count - 1; i >= 0; i--)
+            {
+                EquipmentSlotBase slot = equipmentSlots[i];
+                if (slot is not TSlotType) continue;
+                RemoveEquipmentSlot(slot, inventory);
+                return;
+            }
+        }
+
+        /// <summary>
+        ///     Removes ANY FIRST equipment slot for specific item type
         /// </summary>
         /// <param name="inventory">Inventory to add item to</param>
         /// <param name="addItemToInventory">If true, item will be added to inventory before removing slot</param>
@@ -93,8 +166,10 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Remove slots that are empty
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
-                if (!equipmentSlots[i].IsItemValid<TItemType>()) continue;
-                equipmentSlots.RemoveAt(i);
+                EquipmentSlotBase slot = equipmentSlots[i];
+                if (!slot.IsItemValid<TItemType>()) continue;
+                if (!ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
+                RemoveEquipmentSlot(slot, inventory);
                 return;
             }
 
@@ -102,35 +177,52 @@ namespace Systems.SimpleInventory.Components.Equipment
             for (int i = equipmentSlots.Count - 1; i >= 0; i--)
             {
                 if (!equipmentSlots[i].IsItemValid<TItemType>()) continue;
-
-                // Add item to inventory before removing slot
-                if (addItemToInventory && inventory is not null)
-                    inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
-                else if (addItemToInventory)
-                {
-                    Transform objTransform = ReferenceEquals(DropPositionFallback, null)
-                        ? transform
-                        : DropPositionFallback;
-                    ItemBase.DropItem<PickupItemWithDestroy>(equipmentSlots[i].CurrentlyEquippedItem,
-                        1, objTransform.position, objTransform.rotation);
-                }
-
-                equipmentSlots.RemoveAt(i);
+                RemoveEquipmentSlot(equipmentSlots[i], inventory);
                 return;
             }
         }
 
+        /// <summary>
+        ///     Removes ALL equipment slots of specific type
+        /// </summary>
+        /// <param name="inventory">Inventory to add item to</param>
+        /// <typeparam name="TSlotType">Type of slot to remove</typeparam>
+        protected void RemoveEquipmentSlots<TSlotType>([CanBeNull] InventoryBase inventory = null)
+            where TSlotType : EquipmentSlotBase
+        {
+            for (int i = equipmentSlots.Count - 1; i >= 0; i--)
+            {
+                EquipmentSlotBase slot = equipmentSlots[i];
+                if (slot is not TSlotType) continue;
+                RemoveEquipmentSlot(slot, inventory);
+            }
+        }
+
+        /// <summary>
+        ///     Removes ALL equipment slots for specific item type
+        /// </summary>
+        /// <param name="inventory">Inventory to add item to</param>
+        /// <typeparam name="TItemType">Type of item to remove</typeparam>
+        protected void RemoveEquipmentSlotsFor<TItemType>([CanBeNull] InventoryBase inventory = null)
+            where TItemType : EquippableItemBase
+        {
+            for (int i = equipmentSlots.Count - 1; i >= 0; i--)
+            {
+                if (!equipmentSlots[i].IsItemValid<TItemType>()) continue;
+                RemoveEquipmentSlot(equipmentSlots[i], inventory);
+            }
+        }
 
         /// <summary>
         ///     Gets first free slot for item.
         /// </summary>
         /// <param name="forItem">Item to find slot for</param>
         /// <returns>First free slot or null if no free slot is found</returns>
-        [CanBeNull] internal EquipmentSlot GetFreeSlot([NotNull] WorldItem forItem)
+        [CanBeNull] internal EquipmentSlotBase GetFreeSlot([NotNull] WorldItem forItem)
         {
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null) && slot.IsItemValid(forItem)) return slot;
             }
 
@@ -145,19 +237,19 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// <remarks>
         ///     Prioritizes free slots over swap slots.
         /// </remarks>
-        [CanBeNull] internal EquipmentSlot GetFreeOrSwapSlot([NotNull] WorldItem forItem)
+        [CanBeNull] internal EquipmentSlotBase GetFreeOrSwapSlot([NotNull] WorldItem forItem)
         {
             // Handle free slots
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null) && slot.IsItemValid(forItem)) return slot;
             }
 
             // Handle swap slots
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (slot.IsItemValid(forItem)) return slot;
             }
 
@@ -169,11 +261,11 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="forItem">Item tp find</param>
         /// <returns>First equipped slot or null if no slot is equipped</returns>
-        [CanBeNull] internal EquipmentSlot GetFirstEquippedSlot([NotNull] WorldItem forItem)
+        [CanBeNull] internal EquipmentSlotBase GetFirstEquippedSlot([NotNull] WorldItem forItem)
         {
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
                 if (!Equals(slot.CurrentlyEquippedItem, forItem)) continue;
                 return slot;
@@ -187,11 +279,11 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="forItem">Item tp find</param>
         /// <returns>First equipped slot or null if no slot is equipped</returns>
-        [CanBeNull] internal EquipmentSlot GetFirstEquippedSlot([NotNull] ItemBase forItem)
+        [CanBeNull] internal EquipmentSlotBase GetFirstEquippedSlot([NotNull] ItemBase forItem)
         {
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
                 if (!ReferenceEquals(slot.CurrentlyEquippedItem.Item, forItem)) continue;
                 return slot;
@@ -205,12 +297,12 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <typeparam name="TItemType">Item type</typeparam>
         /// <returns>Equipped slot or null if no slot is equipped</returns>
-        [CanBeNull] internal EquipmentSlot GetFirstEquippedSlot<TItemType>()
+        [CanBeNull] internal EquipmentSlotBase GetFirstEquippedSlot<TItemType>()
             where TItemType : EquippableItemBase
         {
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
                 if (slot.CurrentlyEquippedItem.Item is not TItemType) continue;
                 return slot;
@@ -231,7 +323,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         [CanBeNull] public TItemBase GetFirstEquippedBaseItemFor<TItemBase>()
             where TItemBase : EquippableItemBase
         {
-            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
+            EquipmentSlotBase slot = GetFirstEquippedSlot<TItemBase>();
             if (ReferenceEquals(slot, null)) return null;
             if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) return null;
             return slot.CurrentlyEquippedItem.Item as TItemBase;
@@ -245,7 +337,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         [CanBeNull] public WorldItem GetFirstEquippedItemFor<TItemBase>()
             where TItemBase : EquippableItemBase
         {
-            EquipmentSlot slot = GetFirstEquippedSlot<TItemBase>();
+            EquipmentSlotBase slot = GetFirstEquippedSlot<TItemBase>();
             return slot?.CurrentlyEquippedItem;
         }
 
@@ -261,7 +353,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
-                EquipmentSlot slot = equipmentSlots[i];
+                EquipmentSlotBase slot = equipmentSlots[i];
                 if (slot.IsItemValid<TItemBase>()) continue;
                 if (ReferenceEquals(slot.CurrentlyEquippedItem, null)) continue;
                 if (slot.CurrentlyEquippedItem.Item is not TItemBase item) continue;
@@ -302,13 +394,10 @@ namespace Systems.SimpleInventory.Components.Equipment
         ///     Equips an item.
         /// </summary>
         /// <param name="context">Context of action</param>
-        /// <param name="flags">Flags for modifying action</param>
         /// <param name="actionSource">Action source</param>
         /// <returns>Result of action</returns>
         internal EquipItemResult Equip(
             in EquipItemContext context,
-            EquipmentModificationFlags flags =
-                EquipmentModificationFlags.None,
             ActionSource actionSource = ActionSource.External)
         {
             EquippableItemBase equippableItemRef = context.itemBase;
@@ -322,7 +411,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             }
 
             // Check if item can be equipped
-            if (!CanEquip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            if (!CanEquip(context) && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
                 if (actionSource == ActionSource.Internal) return EquipItemResult.NotAllowed;
                 OnItemCannotBeEquipped(context.WithReason(EquipItemResult.NotAllowed));
@@ -330,7 +419,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             }
 
             // Find first empty slot we can equip item to
-            EquipmentSlot slot = (context.flags & EquipmentModificationFlags.AllowItemSwap) != 0
+            EquipmentSlotBase slot = (context.flags & EquipmentModificationFlags.AllowItemSwap) != 0
                 ? GetFreeOrSwapSlot(context.item)
                 : GetFreeSlot(context.item);
             if (slot == null)
@@ -382,13 +471,10 @@ namespace Systems.SimpleInventory.Components.Equipment
         ///     Unequips an item.
         /// </summary>
         /// <param name="context">Context of action</param>
-        /// <param name="flags">Flags for modifying action</param>
         /// <param name="actionSource">Source of action</param>
         /// <returns>Result of action</returns>
         internal UnequipItemResult Unequip(
             in UnequipItemContext context,
-            EquipmentModificationFlags flags =
-                EquipmentModificationFlags.None,
             ActionSource actionSource = ActionSource.External)
         {
             EquippableItemBase equippableItemRef = context.itemBase;
@@ -402,7 +488,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             }
 
             // Check if item can be unequipped
-            if (!CanUnequip(context) && (flags & EquipmentModificationFlags.IgnoreConditions) == 0)
+            if (!CanUnequip(context) && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
                 if (actionSource == ActionSource.Internal) return UnequipItemResult.NotAllowed;
                 OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotAllowed));
@@ -410,13 +496,22 @@ namespace Systems.SimpleInventory.Components.Equipment
             }
 
             // Get item to unequip
-            EquipmentSlot slot = GetFirstEquippedSlot(context.item);
-            if (slot == null)
-            {
-                if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
-                OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
-                return UnequipItemResult.NotEquipped;
-            }
+            EquipmentSlotBase slot = GetFirstEquippedSlot(context.item);
+            if (slot != null) return UnequipFromSlot(slot, context, actionSource);
+            
+            // Item is not equipped at all
+            if (actionSource == ActionSource.Internal) return UnequipItemResult.NotEquipped;
+            OnItemCannotBeUnequipped(context.WithReason(UnequipItemResult.NotEquipped));
+            return UnequipItemResult.NotEquipped;
+        }
+
+        internal UnequipItemResult UnequipFromSlot(
+            [NotNull] EquipmentSlotBase slot,
+            in UnequipItemContext context,
+            ActionSource actionSource = ActionSource.External)
+        {
+            // Sanity check
+            Assert.AreEqual(slot.CurrentlyEquippedItem, context.item, "Slot item does not match item to unequip");
 
             // Add item to inventory if needed
             if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0 && context.inventory is not null)

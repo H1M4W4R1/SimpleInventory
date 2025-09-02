@@ -110,12 +110,14 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="slotIndex">Index of slot</param>
         /// <param name="toEquipment">Equipment to equip item to</param>
         /// <param name="flags">Flags for equip operation</param>
+        /// <param name="actionSource">Source of action</param>
         /// <returns>Result of the equip operation</returns>
         public EquipItemResult EquipItem(
             int slotIndex,
             [NotNull] EquipmentBase toEquipment,
             EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory |
-                                               EquipmentModificationFlags.AllowItemSwap)
+                                               EquipmentModificationFlags.AllowItemSwap,
+            ActionSource actionSource = ActionSource.External)
         {
             // Check if slot is valid
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return EquipItemResult.InvalidSlot;
@@ -130,7 +132,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             // Create context
             EquipItemContext context = new(toEquipment, this, slotIndex, flags, EquipItemResult.Unknown);
 
-            return toEquipment.Equip(context);
+            return toEquipment.Equip(context, actionSource);
         }
 
         /// <summary>
@@ -139,16 +141,18 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="item">Item to unequip</param>
         /// <param name="fromEquipment">Equipment to unequip item from</param>
         /// <param name="flags">Flags for unequip operation</param>
+        /// <param name="actionSource">Source of action</param>
         /// <returns>Result of the unequip operation</returns>
         public UnequipItemResult UnequipItem(
             [NotNull] WorldItem item,
             [NotNull] EquipmentBase fromEquipment,
-            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory)
+            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory,
+            ActionSource actionSource = ActionSource.External)
         {
             // Create context
             UnequipItemContext context = new(this, fromEquipment,
                 item, flags, UnequipItemResult.Unknown);
-            return fromEquipment.Unequip(context, flags);
+            return fromEquipment.Unequip(context, actionSource);
         }
 
         /// <summary>
@@ -157,11 +161,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="slotIndex">Index of slot</param>
         /// <param name="fromEquipment">Equipment to unequip item from</param>
         /// <param name="flags">Flags for unequip operation</param>
+        /// <param name="actionSource">Source of action</param>
         /// <returns>Result of the unequip operation</returns>
         public UnequipItemResult UnequipItem(
             int slotIndex,
             [NotNull] EquipmentBase fromEquipment,
-            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory)
+            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory,
+            ActionSource actionSource = ActionSource.External)
         {
             // Check if slot is valid
             if (slotIndex < 0 || slotIndex >= _inventoryData.Count) return UnequipItemResult.InvalidSlot;
@@ -171,7 +177,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is null) return UnequipItemResult.InvalidItem;
 
             // Call to default implementation
-            return UnequipItem(item, fromEquipment, flags);
+            return UnequipItem(item, fromEquipment, flags, actionSource);
         }
 
         /// <summary>
@@ -179,19 +185,21 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
         /// <param name="flags">Flags for equip operation</param>
+        /// <param name="actionSource">Source of action</param>
         /// <typeparam name="TItemType">Item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
         public EquipItemResult EquipAnyItem<TItemType>(
             [NotNull] EquipmentBase toEquipment,
             EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory |
-                                               EquipmentModificationFlags.AllowItemSwap)
+                                               EquipmentModificationFlags.AllowItemSwap,
+            ActionSource actionSource = ActionSource.External)
             where TItemType : EquippableItemBase
         {
             // Get first item
             InventoryItemReference itemReference = GetFirstItemOfType<TItemType>();
             if (itemReference.item is null) return EquipItemResult.InvalidItem;
 
-            return EquipItem(itemReference.slotIndex, toEquipment, flags);
+            return EquipItem(itemReference.slotIndex, toEquipment, flags, actionSource);
         }
 
         /// <summary>
@@ -199,11 +207,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// </summary>
         /// <param name="toEquipment">Equipment to equip item to</param>
         /// <param name="flags">Flags for unequip operation</param>
+        /// <param name="actionSource">Source of action</param>
         /// <typeparam name="TItemType">Item to equip</typeparam>
         /// <returns>Result of the equip operation</returns>
         public UnequipItemResult UnequipAnyItem<TItemType>(
             [NotNull] EquipmentBase toEquipment,
-            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory)
+            EquipmentModificationFlags flags = EquipmentModificationFlags.ModifyInventory,
+            ActionSource actionSource = ActionSource.External)
             where TItemType : EquippableItemBase
         {
             // Get all items in inventory of specified type
@@ -211,7 +221,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (ReferenceEquals(item, null)) return UnequipItemResult.InvalidItem;
 
             // Unequip item to inventory
-            UnequipItem(item, toEquipment, flags);
+            UnequipItem(item, toEquipment, flags, actionSource);
 
             // Item is not equipped
             return UnequipItemResult.NotEquipped;
