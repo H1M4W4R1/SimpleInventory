@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
+using Systems.SimpleCore.Identifiers;
 using Systems.SimpleCore.Storage;
 using Systems.SimpleInventory.Data.Items.Base;
-using Systems.SimpleInventory.Data.Native.Item;
 
 namespace Systems.SimpleInventory.Data
 {
@@ -18,7 +18,7 @@ namespace Systems.SimpleInventory.Data
         /// </summary>
         /// <param name="identifier">Identifier of item to get</param>
         /// <returns>Item with given identifier or null if not found</returns>
-        [CanBeNull] public static ItemBase GetItem(ItemID identifier)
+        [CanBeNull] public static ItemBase GetItem(Snowflake128 identifier)
         {
             _instance.EnsureLoaded();
 

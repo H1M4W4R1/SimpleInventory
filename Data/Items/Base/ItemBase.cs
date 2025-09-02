@@ -1,12 +1,12 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Automation.Attributes;
+using Systems.SimpleCore.Identifiers;
 using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
 using Systems.SimpleInventory.Data.Items.Data;
-using Systems.SimpleInventory.Data.Native.Item;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Data.Items.Base
@@ -16,12 +16,12 @@ namespace Systems.SimpleInventory.Data.Items.Base
     ///     with custom logic.
     /// </summary>
     [Serializable] [AutoCreate("Items", ItemsDatabase.LABEL)]
-    public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<ItemID>
+    public abstract class ItemBase : ScriptableObject, IComparable<ItemBase>, IComparable<Snowflake128>
     {
         /// <summary>
         ///     Identifier of this item
         /// </summary>
-        [field: SerializeField] public ItemID Identifier { get; private set; } = ItemID.New();
+        [field: SerializeField] public Snowflake128 Identifier { get; private set; } = Snowflake128.New();
 
         /// <summary>
         ///     Maximum stack count for this item.
@@ -53,10 +53,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
             return Identifier.CompareTo(other.Identifier);
         }
 
-        /// <summary>
-        ///     Compares this item with another item identifier
-        /// </summary>
-        public int CompareTo(ItemID other)
+        public int CompareTo(Snowflake128 other)
         {
             return Identifier.CompareTo(other);
         }
