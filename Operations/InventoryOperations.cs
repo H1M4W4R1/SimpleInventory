@@ -4,57 +4,78 @@ namespace Systems.SimpleInventory.Operations
 {
     public static class InventoryOperations
     {
-        public const int NOT_ENOUGH_SPACE = 1;
-        public const int NOT_ENOUGH_ITEMS = 2;
-        public const int NOT_ALLOWED_TO_SWAP = 3;
-        public const int INVALID_ITEM_TYPE = 4;
-        public const int ITEM_IS_NULL = 5;
-        public const int INVALID_SLOT_INDEX = 6;
-        public const int SLOT_IS_EMPTY = 7;
-        public const int ITEM_NOT_FOUND = 8;
+        public const ushort SYSTEM_INVENTORY = 0x0005;
 
-        public const int ALREADY_EQUIPPED = 9;
-        public const int NOT_EQUIPPED = 10;
-        public const int CANNOT_EQUIP = 11;
-        public const int CANNOT_UNEQUIP = 12;
-        public const int NO_FREE_SLOTS = 13;
-        public const int INVENTORY_NOT_CREATED = 14;
-        public const int INVALID_AMOUNT = 15;
+        public const ushort ERROR_INVENTORY_NOT_CREATED = 1;
+        public const ushort ERROR_INVALID_AMOUNT = 2;
+        public const ushort ERROR_INVALID_SLOT_INDEX = 3;
+        public const ushort ERROR_SLOT_IS_EMPTY = 4;
+        public const ushort ERROR_ITEM_NOT_FOUND = 5;
+        public const ushort ERROR_NOT_ENOUGH_SPACE = 6;
+        public const ushort ERROR_NOT_ENOUGH_ITEMS = 7;
 
-        public static OperationResult NotEnoughSpace() => new(NOT_ENOUGH_SPACE);
-        public static OperationResult NotEnoughItems() => new(NOT_ENOUGH_ITEMS);
-        public static OperationResult InvalidItemType() => new(INVALID_ITEM_TYPE);
-        public static OperationResult ItemIsNull() => new(ITEM_IS_NULL);
-        public static OperationResult InvalidSlotIndex() => new(INVALID_SLOT_INDEX);
-        public static OperationResult SlotIsEmpty() => new(SLOT_IS_EMPTY);
-        public static OperationResult ItemNotFound() => new(SLOT_IS_EMPTY);
-        public static OperationResult InventoryNotCreated() => new(INVENTORY_NOT_CREATED);
-        public static OperationResult InvalidAmount() => new(INVALID_AMOUNT);
+        public const ushort ERROR_ITEM_IS_NULL = 9;
+        public const ushort ERROR_ITEM_NOT_USABLE = 10;
+        public const ushort ERROR_ITEM_NOT_EQUIPPABLE = 11;
+
+        public const ushort SUCCESS_ITEMS_ADDED = 1;
+        public const ushort SUCCESS_ITEMS_TAKEN = 2;
+        public const ushort SUCCESS_ITEMS_TRANSFERRED = 3;
+        public const ushort SUCCESS_ITEMS_DROPPED = 4;
+        public const ushort SUCCESS_ITEMS_PICKED_UP = 5;
+        public const ushort SUCCESS_ITEMS_USED = 6;
+
+        public static OperationResult Permitted()
+            => OperationResult.Success(SYSTEM_INVENTORY, OperationResult.SUCCESS_PERMITTED);
+
+        public static OperationResult NotEnoughSpace()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_NOT_ENOUGH_SPACE);
+
+        public static OperationResult NotEnoughItems()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_NOT_ENOUGH_ITEMS);
+
+    
+        public static OperationResult ItemIsNull() => OperationResult.Error(SYSTEM_INVENTORY, ERROR_ITEM_IS_NULL);
+
+        public static OperationResult InvalidSlotIndex()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_INVALID_SLOT_INDEX);
+
+        public static OperationResult SlotIsEmpty()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_SLOT_IS_EMPTY);
+
+        public static OperationResult ItemNotFound()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_ITEM_NOT_FOUND);
+
+        public static OperationResult InventoryNotCreated()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_INVENTORY_NOT_CREATED);
+
+        public static OperationResult InvalidAmount()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_INVALID_AMOUNT);
+
         
-        public static OperationResult ItemsAdded() => OperationResult.GenericSuccess;
-        public static OperationResult ItemsTaken() => OperationResult.GenericSuccess;
-        public static OperationResult ItemsTransferred() => OperationResult.GenericSuccess;
-        public static OperationResult ItemsDropped() => OperationResult.GenericSuccess;
-        public static OperationResult ItemsPickedUp() => OperationResult.GenericSuccess;
+        public static OperationResult ItemNotEquippable()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_ITEM_NOT_EQUIPPABLE);
         
-        public static OperationResult Permitted() => OperationResult.GenericSuccess;
-#region Equipment
+        public static OperationResult ItemNotUsable()
+            => OperationResult.Error(SYSTEM_INVENTORY, ERROR_ITEM_NOT_USABLE);
+        
+        public static OperationResult ItemsAdded()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_ADDED);
 
-        public static OperationResult AlreadyEquipped() => new(ALREADY_EQUIPPED);
-        public static OperationResult NotEquipped() => new(NOT_EQUIPPED);
-        public static OperationResult CannotEquip() => new(CANNOT_EQUIP);
-        public static OperationResult CannotUnequip() => new(CANNOT_UNEQUIP);
-        public static OperationResult NoFreeSlots() => new(NO_FREE_SLOTS);
+        public static OperationResult ItemsTaken()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_TAKEN);
 
-        public static OperationResult Equipped() => OperationResult.GenericSuccess;
-        public static OperationResult Unequipped() => OperationResult.GenericSuccess;
+        public static OperationResult ItemsTransferred()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_TRANSFERRED);
 
-#endregion
+        public static OperationResult ItemsDropped()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_DROPPED);
 
-#region Usables
+        public static OperationResult ItemsPickedUp()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_PICKED_UP);
 
-        public static OperationResult UsedSuccessfully() => OperationResult.GenericSuccess;
-
-#endregion
+        public static OperationResult UsedSuccessfully()
+            => OperationResult.Success(SYSTEM_INVENTORY, SUCCESS_ITEMS_USED);
+        
     }
 }

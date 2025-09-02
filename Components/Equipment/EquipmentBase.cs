@@ -407,9 +407,9 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Check if already equipped
             if (equippableItemRef.IsEquipped(context))
             {
-                if (actionSource == ActionSource.Internal) return InventoryOperations.AlreadyEquipped();
-                OnItemAlreadyEquipped(context, InventoryOperations.AlreadyEquipped());
-                return InventoryOperations.AlreadyEquipped();
+                if (actionSource == ActionSource.Internal) return EquipmentOperations.AlreadyEquipped();
+                OnItemAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
+                return EquipmentOperations.AlreadyEquipped();
             }
 
             // Check if item can be equipped
@@ -427,17 +427,17 @@ namespace Systems.SimpleInventory.Components.Equipment
                 : GetFreeSlot(context.item);
             if (slot == null)
             {
-                if (actionSource == ActionSource.Internal) return InventoryOperations.NoFreeSlots();
-                OnItemCannotBeEquipped(context, InventoryOperations.NoFreeSlots());
-                return InventoryOperations.NoFreeSlots();
+                if (actionSource == ActionSource.Internal) return EquipmentOperations.NoFreeSlots();
+                OnItemCannotBeEquipped(context, EquipmentOperations.NoFreeSlots());
+                return EquipmentOperations.NoFreeSlots();
             }
 
             // Sanity check for same item
             if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
             {
-                if (actionSource == ActionSource.Internal) return InventoryOperations.AlreadyEquipped();
-                OnItemAlreadyEquipped(context, InventoryOperations.AlreadyEquipped());
-                return InventoryOperations.AlreadyEquipped();
+                if (actionSource == ActionSource.Internal) return EquipmentOperations.AlreadyEquipped();
+                OnItemAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
+                return EquipmentOperations.AlreadyEquipped();
             }
 
             // Unequip item if was already equipped
@@ -465,9 +465,9 @@ namespace Systems.SimpleInventory.Components.Equipment
                 context.slot.inventory.Take(context.slot.slotIndex, ActionSource.Internal);
 
             // Call events
-            if (actionSource == ActionSource.Internal) return InventoryOperations.Equipped();
-            OnItemEquipped(context, InventoryOperations.Equipped());
-            return InventoryOperations.Equipped();
+            if (actionSource == ActionSource.Internal) return EquipmentOperations.Equipped();
+            OnItemEquipped(context, EquipmentOperations.Equipped());
+            return EquipmentOperations.Equipped();
         }
 
         /// <summary>
@@ -485,9 +485,9 @@ namespace Systems.SimpleInventory.Components.Equipment
             // Check if already unequipped
             if (!equippableItemRef.IsEquipped(context))
             {
-                if (actionSource == ActionSource.Internal) return InventoryOperations.NotEquipped();
-                OnItemAlreadyUnequipped(context, InventoryOperations.NotEquipped());
-                return InventoryOperations.NotEquipped();
+                if (actionSource == ActionSource.Internal) return EquipmentOperations.NotEquipped();
+                OnItemAlreadyUnequipped(context, EquipmentOperations.NotEquipped());
+                return EquipmentOperations.NotEquipped();
             }
 
             // Check if item can be unequipped
@@ -504,9 +504,9 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (slot != null) return UnequipFromSlot(slot, context, actionSource);
 
             // Item is not equipped at all
-            if (actionSource == ActionSource.Internal) return InventoryOperations.NotEquipped();
-            OnItemCannotBeUnequipped(context, InventoryOperations.NotEquipped());
-            return InventoryOperations.NotEquipped();
+            if (actionSource == ActionSource.Internal) return EquipmentOperations.NotEquipped();
+            OnItemCannotBeUnequipped(context, EquipmentOperations.NotEquipped());
+            return EquipmentOperations.NotEquipped();
         }
 
         internal OperationResult UnequipFromSlot(
@@ -534,9 +534,9 @@ namespace Systems.SimpleInventory.Components.Equipment
                 "Something went wrong while unequipping item, this should never happen");
 
             // Call events
-            if (actionSource == ActionSource.Internal) return InventoryOperations.Unequipped();
-            OnItemUnequipped(context, InventoryOperations.Unequipped());
-            return InventoryOperations.Unequipped();
+            if (actionSource == ActionSource.Internal) return EquipmentOperations.Unequipped();
+            OnItemUnequipped(context, EquipmentOperations.Unequipped());
+            return EquipmentOperations.Unequipped();
         }
 
 #endregion

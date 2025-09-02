@@ -148,7 +148,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (item is null) return InventoryOperations.SlotIsEmpty();
 
             // Check if item is equippable
-            if (item.Item is not EquippableItemBase) return InventoryOperations.InvalidItemType();
+            if (item.Item is not EquippableItemBase) return InventoryOperations.ItemNotEquippable();
 
             // Create context
             EquipItemContext context = new(toEquipment, this, slotIndex, flags);
@@ -238,7 +238,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         {
             // Get all items in inventory of specified type
             WorldItem item = toEquipment.GetFirstEquippedItemFor<TItemType>();
-            if (item is null) return InventoryOperations.NotEquipped();
+            if (item is null) return EquipmentOperations.NotEquipped();
 
             // Unequip item to inventory
             return UnequipItem(item, toEquipment, flags, actionSource);
@@ -285,7 +285,7 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             // Check if item is equippable
             if (item is null) return InventoryOperations.SlotIsEmpty();
-            if (item.Item is not UsableItemBase usableItem) return InventoryOperations.InvalidItemType();
+            if (item.Item is not UsableItemBase usableItem) return InventoryOperations.ItemNotUsable();
 
             // Create context
             UseItemContext context = new(this, slotIndex);
@@ -972,7 +972,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             ActionSource actionSource = ActionSource.External)
         {
             // Void items are always removed
-            if (item is null) return InventoryOperations.InvalidItemType().WithData(amountToTake);
+            if (item is null) return InventoryOperations.ItemsTaken().WithData(0);
 
             // Update context with real taken amount
             int amountLeft = Take(item, amountToTake);
