@@ -94,7 +94,12 @@ namespace Systems.SimpleInventory.Components.Inventory
 
             return items;
         }
-
+        
+        /// <summary>
+        ///     Gets slot at specified index
+        /// </summary>
+        /// <param name="sourceSlotIndex">Index of slot</param>
+        /// <returns>Found slot</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)] [NotNull]
         protected internal InventorySlot GetSlotAt(int sourceSlotIndex)
         {
@@ -102,6 +107,11 @@ namespace Systems.SimpleInventory.Components.Inventory
             return _inventoryData[sourceSlotIndex];
         }
 
+        /// <summary>
+        ///     Gets best item of specified type
+        /// </summary>
+        /// <typeparam name="TItemType">Item type</typeparam>
+        /// <returns>Found best item or null if no item of specified type is found</returns>
         [CanBeNull] public InventoryItemReference? GetBestItem<TItemType>()
             where TItemType : ItemBase
         {
@@ -386,7 +396,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="actionSource">Source of action</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         /// <returns>True if item was dropped, false otherwise</returns>
-        public OperationResult DropItemAs<TPickupItemType>(
+        public OperationResult TryDropItemAs<TPickupItemType>(
             [NotNull] WorldItem item,
             int amount,
             ActionSource actionSource = ActionSource.External)
@@ -426,7 +436,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="actionSource">Source of action</param>
         /// <typeparam name="TPickupItemType">Type of pickup component to use</typeparam>
         /// <returns>True if item was dropped, false otherwise</returns>
-        public bool DropItemAs<TPickupItemType>(
+        public bool TryDropItemAs<TPickupItemType>(
             int slotIndex,
             int amount,
             ActionSource actionSource = ActionSource.External)
@@ -440,7 +450,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if (itemReference is null) return false;
 
             // Fallback to original implementation
-            return DropItemAs<TPickupItemType>(itemReference, amount, actionSource);
+            return TryDropItemAs<TPickupItemType>(itemReference, amount, actionSource);
         }
 
 #endregion
@@ -457,7 +467,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="targetAmount">Amount of items to transfer to this inventory</param>
         /// <param name="actionSource">Source of action</param>
         /// <returns>True if transfer was successful</returns>
-        public OperationResult TransferItems(
+        public OperationResult TryTransferItems(
             [NotNull] InventoryBase targetInventory,
             [NotNull] WorldItem sourceItem,
             int sourceAmount,
@@ -504,7 +514,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <param name="transferFlags">Transfer flags</param>
         /// <param name="actionSource">Source of action</param>
         /// <returns>True if transfer was successful</returns>
-        public virtual OperationResult TransferItem(
+        public virtual OperationResult TryTransferItem(
             int sourceSlot,
             [NotNull] InventoryBase targetInventory,
             int targetSlot,
@@ -820,7 +830,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             if ((int) remaining == 0) return;
 
             // We drop it always as external action as it was failure of add operation
-            DropItemAs<PickupItemWithDestroy>(item, (int) remaining);
+            TryDropItemAs<PickupItemWithDestroy>(item, (int) remaining);
         }
 
         /// <summary>
@@ -1123,13 +1133,13 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be picked up
         /// </summary>
-        public virtual OperationResult CanPickupItem(PickupItemContext checkContext) =>
+        protected virtual OperationResult CanPickupItem(PickupItemContext checkContext) =>
             checkContext.pickupSource.ItemInstance.Item.CanPickup(checkContext);
 
         /// <summary>
         ///     Checks if item can be added to inventory
         /// </summary>
-        public virtual OperationResult CanAddItem(AddItemContext context)
+        protected virtual OperationResult CanAddItem(AddItemContext context)
         {
             if (GetFreeSpaceFor(context.itemInstance) < context.amount)
                 return InventoryOperations.NotEnoughSpace();
@@ -1140,7 +1150,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be taken from inventory
         /// </summary>
-        public virtual OperationResult CanTakeItem(TakeItemContext context)
+        protected virtual OperationResult CanTakeItem(TakeItemContext context)
         {
             // Check depending on context containing exact world item
             if (!ReferenceEquals(context.exactItem, null))
@@ -1158,7 +1168,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <summary>
         ///     Checks if item can be dropped from inventory
         /// </summary>
-        public virtual OperationResult CanDropItem(DropItemContext context)
+        protected virtual OperationResult CanDropItem(DropItemContext context)
         {
             // Check if items can be taken
             OperationResult canTakeResult = CanTakeItem(new TakeItemContext(
@@ -1174,7 +1184,7 @@ namespace Systems.SimpleInventory.Components.Inventory
         /// <remarks>
         ///     It's heavily discouraged to override this method
         /// </remarks>
-        public virtual OperationResult CanTransferItem(TransferItemContext context)
+        protected virtual OperationResult CanTransferItem(TransferItemContext context)
         {
             // Check per-item transfer conditions (for any transfer type)
             if (context.sourceItem is not null)

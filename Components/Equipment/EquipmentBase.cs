@@ -377,7 +377,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Action context</param>
         /// <returns>True if item is equipped</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in EquipItemContext context)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] internal bool IsEquipped(in EquipItemContext context)
             => IsEquipped(context.item);
 
         /// <summary>
@@ -385,7 +385,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Action context</param>
         /// <returns>True if item is equipped</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped(in UnequipItemContext context)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] internal bool IsEquipped(in UnequipItemContext context)
             => IsEquipped(context.item);
 
 #endregion
@@ -548,7 +548,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if item can be equipped</returns>
-        public virtual OperationResult CanEquip(in EquipItemContext context) =>
+        protected virtual OperationResult CanEquip(in EquipItemContext context) =>
             context.itemBase.CanEquip(context);
 
         /// <summary>
@@ -556,7 +556,7 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if item can be unequipped</returns>
-        public virtual OperationResult CanUnequip(in UnequipItemContext context) =>
+        protected virtual OperationResult CanUnequip(in UnequipItemContext context) =>
             context.itemBase.CanUnequip(context);
 
 #endregion
