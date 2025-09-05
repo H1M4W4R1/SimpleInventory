@@ -14,7 +14,7 @@ namespace Systems.SimpleInventory.Examples.Items.Food.Abstract
         [field: SerializeField] public int MinHealthRestore { get; private set; }
         [field: SerializeField] public int MaxHealthRestore { get; private set; }
 
-        public sealed override void OnUse(in UseItemContext context, OperationResult result)
+        protected internal sealed override void OnUse(in UseItemContext context, OperationResult result)
         {
             // Get item data
             ItemData itemData = context.itemInstance.Data;

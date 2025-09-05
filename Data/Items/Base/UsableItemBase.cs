@@ -14,16 +14,19 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of the usage</param>
         /// <returns>True if the item can be used, false otherwise</returns>
-        protected internal virtual OperationResult CanUse(in UseItemContext context) => InventoryOperations.Permitted();
-        
+        protected internal virtual OperationResult CanUse(in UseItemContext context)
+            => InventoryOperations.Permitted();
+
         /// <summary>
         ///     Called when the item is used.
         /// </summary>
-        public abstract void OnUse(in UseItemContext context, OperationResult result);
+        protected internal abstract void OnUse(in UseItemContext context, OperationResult result);
 
         /// <summary>
         ///     Called when the item usage fails.
         /// </summary>
-        protected internal virtual void OnUseFailed(in UseItemContext context, OperationResult result) {}
+        protected internal virtual void OnUseFailed(in UseItemContext context, OperationResult result)
+        {
+        }
     }
 }
