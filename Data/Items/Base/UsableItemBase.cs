@@ -14,7 +14,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of the usage</param>
         /// <returns>True if the item can be used, false otherwise</returns>
-        public virtual OperationResult CanUse(in UseItemContext context) => InventoryOperations.Permitted();
+        protected internal virtual OperationResult CanUse(in UseItemContext context) => InventoryOperations.Permitted();
         
         /// <summary>
         ///     Called when the item is used.

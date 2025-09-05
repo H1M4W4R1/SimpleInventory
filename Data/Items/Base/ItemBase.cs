@@ -65,27 +65,27 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         ///     Checks if item can be picked up
         /// </summary>
-        public OperationResult CanPickup(in PickupItemContext context) => InventoryOperations.Permitted();
+        protected internal OperationResult CanPickup(in PickupItemContext context) => InventoryOperations.Permitted();
         
         /// <summary>
         /// Checks if item can be added to inventory
         /// </summary>
-        public OperationResult CanAdd(in AddItemContext context) => InventoryOperations.Permitted();
+        protected internal OperationResult CanAdd(in AddItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be taken from inventory
         /// </summary>
-        public OperationResult CanTake(in TakeItemContext context) => InventoryOperations.Permitted();
+        protected internal OperationResult CanTake(in TakeItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be dropped
         /// </summary>
-        public OperationResult CanDrop(in DropItemContext context) => InventoryOperations.Permitted();
+        protected internal OperationResult CanDrop(in DropItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if item can be transferred
         /// </summary>
-        public OperationResult CanTransfer(in TransferItemContext context) => InventoryOperations.Permitted();
+        protected internal OperationResult CanTransfer(in TransferItemContext context) => InventoryOperations.Permitted();
 
 #endregion
 

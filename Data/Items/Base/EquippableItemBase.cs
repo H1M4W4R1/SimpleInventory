@@ -14,7 +14,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context to check in</param>
         /// <returns>True if the item is equipped, false otherwise</returns>
-        public bool IsEquipped(in EquipItemContext context) =>
+        internal bool IsEquipped(in EquipItemContext context) =>
             context.equipment.IsEquipped(context);
         
         /// <summary>
@@ -22,7 +22,7 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context to check in</param>
         /// <returns>True if the item is equipped, false otherwise</returns>
-        public bool IsEquipped(in UnequipItemContext context) =>
+        internal bool IsEquipped(in UnequipItemContext context) =>
             context.equipment.IsEquipped(context);
 
         /// <summary>
@@ -30,14 +30,14 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be equipped, false otherwise</returns>
-        public virtual OperationResult CanEquip(in EquipItemContext context) => InventoryOperations.Permitted();
+        protected internal virtual OperationResult CanEquip(in EquipItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Checks if the item can be unequipped.
         /// </summary>
         /// <param name="context">Context of action</param>
         /// <returns>True if the item can be unequipped, false otherwise</returns>
-        public virtual OperationResult CanUnequip(in UnequipItemContext context) => InventoryOperations.Permitted();
+        protected internal virtual OperationResult CanUnequip(in UnequipItemContext context) => InventoryOperations.Permitted();
 
         /// <summary>
         ///     Called when the item is equipped.
