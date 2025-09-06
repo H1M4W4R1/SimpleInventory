@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
+using Systems.SimpleCore.Storage;
 using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
@@ -348,10 +349,11 @@ namespace Systems.SimpleInventory.Components.Equipment
         /// </summary>
         /// <typeparam name="TItemBase">Base type of item used to create slot</typeparam>
         /// <returns>List of equipped items</returns>
-        [NotNull] public IReadOnlyList<TItemBase> GetAllEquippedItemsFor<TItemBase>()
+        public ROListAccess<TItemBase> GetAllEquippedItemsFor<TItemBase>()
             where TItemBase : EquippableItemBase
         {
-            List<TItemBase> items = new();
+            RWListAccess<TItemBase> list = RWListAccess<TItemBase>.Create();
+            List<TItemBase> items = list.List;
 
             for (int i = 0; i < equipmentSlots.Count; i++)
             {
@@ -362,7 +364,7 @@ namespace Systems.SimpleInventory.Components.Equipment
                 items.Add(item);
             }
 
-            return items;
+            return list.ToReadOnly();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)] public bool IsEquipped([NotNull] in WorldItem item) =>
