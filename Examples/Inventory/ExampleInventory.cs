@@ -1,9 +1,12 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
+using Systems.SimpleCore.Storage;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
+using Systems.SimpleInventory.Data.Items.Base;
 using Systems.SimpleInventory.Examples.Equipment;
 using Systems.SimpleInventory.Examples.Items.Armour;
 using Systems.SimpleInventory.Examples.Items.Armour.Abstract;
@@ -41,7 +44,7 @@ namespace Systems.SimpleInventory.Examples.Inventory
             TryAdd<ExampleBread>(1);
             
             // Print database item count
-            Debug.Log("Database item count: " + ItemsDatabase.Count);
+            Debug.Log("Database entries count: " + ItemsDatabase.Count);
         }
 
         [ContextMenu("Use first food")]
@@ -101,6 +104,23 @@ namespace Systems.SimpleInventory.Examples.Inventory
             sb.AppendLine($"Boots: {(boots ? boots.name : "None")}");
             Debug.Log(sb.ToString());
 
+        }
+
+        [ContextMenu("Print all equippable items")]
+        public void PrintAllEquippableItems()
+        {
+            ROListAccess<EquippableItemBase> databaseItems = ItemsDatabase.GetAll<EquippableItemBase>();
+            IReadOnlyList<EquippableItemBase> listAccess = databaseItems.List;
+            
+            StringBuilder sb = new();
+            
+            for (int i = 0; i < listAccess.Count; i++)
+            {
+                sb.AppendLine($"{listAccess[i].name}");
+            } 
+            
+            Debug.Log(sb.ToString());
+            databaseItems.Release();
         }
 
         protected override void OnItemAdded(in AddItemContext context, in OperationResult<int> resultAmountLeft)
