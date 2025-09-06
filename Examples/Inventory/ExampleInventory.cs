@@ -3,6 +3,7 @@ using System.Text;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
 using Systems.SimpleCore.Storage;
+using Systems.SimpleCore.Storage.Lists;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;

@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Systems.SimpleCore.Storage;
+using Systems.SimpleCore.Storage.Databases;
 using Systems.SimpleInventory.Data.Items.Base;
 
 namespace Systems.SimpleInventory.Data
