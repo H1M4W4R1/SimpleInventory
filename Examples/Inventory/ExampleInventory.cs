@@ -2,7 +2,6 @@
 using System.Text;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
-using Systems.SimpleCore.Storage;
 using Systems.SimpleCore.Storage.Lists;
 using Systems.SimpleInventory.Abstract.Items;
 using Systems.SimpleInventory.Components.Inventory;
@@ -17,69 +16,63 @@ using UnityEngine;
 
 namespace Systems.SimpleInventory.Examples.Inventory
 {
-    [RequireComponent(typeof(ExampleEquipment))]
-    public sealed class ExampleInventory : InventoryBase
+    [RequireComponent(typeof(ExampleEquipment))] public sealed class ExampleInventory : InventoryBase
     {
         [CanBeNull] private ExampleEquipment _equipment;
-        
+
         private void Start()
         {
             _equipment = GetComponent<ExampleEquipment>();
-            
+
             // Add example items to inventory
-            
+
             // Leather armor
-            TryAdd<ExampleLeatherBoots>(1);
-            TryAdd<ExampleLeatherPants>(1);
-            TryAdd<ExampleLeatherTunic>(1);
-            TryAdd<ExampleLeatherCap>(1);
-            
+            TryAdd<ExampleLeatherBoots>(1, out _);
+            TryAdd<ExampleLeatherPants>(1, out _);
+            TryAdd<ExampleLeatherTunic>(1, out _);
+            TryAdd<ExampleLeatherCap>(1, out _);
+
             // Steel armor
-            TryAdd<ExampleSteelHelmet>(1);
-            TryAdd<ExampleSteelChestplate>(1);
-            TryAdd<ExampleSteelLeggings>(1);
-            TryAdd<ExampleSteelBoots>(1);
-            
+            TryAdd<ExampleSteelHelmet>(1, out _);
+            TryAdd<ExampleSteelChestplate>(1, out _);
+            TryAdd<ExampleSteelLeggings>(1, out _);
+            TryAdd<ExampleSteelBoots>(1, out _);
+
             // Food 
-            TryAdd<ExampleApple>(1);
-            TryAdd<ExampleBread>(1);
-            
+            TryAdd<ExampleApple>(1, out _);
+            TryAdd<ExampleBread>(1, out _);
+
             // Print database item count
             Debug.Log("Database entries count: " + ItemsDatabase.Count);
         }
 
-        [ContextMenu("Use first food")]
-        public void UseFirstFood() => UseAnyItem<ExampleFoodBase>();
-        
-        [ContextMenu("Use best food")]
-        public void UseBestFoodExample() => UseBestItem<ExampleFoodBase>();
-        
-        [ContextMenu("Equip leather armor")]
-        public void EquipLeatherArmor()
+        [ContextMenu("Use first food")] public void UseFirstFood() => UseAnyItem<ExampleFoodBase>();
+
+        [ContextMenu("Use best food")] public void UseBestFoodExample() => UseBestItem<ExampleFoodBase>();
+
+        [ContextMenu("Equip leather armor")] public void EquipLeatherArmor()
         {
             if (!_equipment) return;
             EquipAnyItem<ExampleLeatherBoots>(_equipment);
             EquipAnyItem<ExampleLeatherPants>(_equipment);
             EquipAnyItem<ExampleLeatherTunic>(_equipment);
             EquipAnyItem<ExampleLeatherCap>(_equipment);
-            
+
             PrintEquippedArmor();
         }
 
-        [ContextMenu("Equip steel armor")]
-        public void EquipSteelArmor()
+        [ContextMenu("Equip steel armor")] public void EquipSteelArmor()
         {
             if (!_equipment) return;
             EquipAnyItem<ExampleSteelHelmet>(_equipment);
             EquipAnyItem<ExampleSteelChestplate>(_equipment);
             EquipAnyItem<ExampleSteelLeggings>(_equipment);
             EquipAnyItem<ExampleSteelBoots>(_equipment);
-            
+
             PrintEquippedArmor();
         }
 
-        [ContextMenu("Unequip armor")]
-        public void UnequipArmor()
+        [ContextMenu("Unequip armor")] public void UnequipArmor()
         {
             if (!_equipment) return;
             UnequipAnyItem<BootsItemBase>(_equipment);
@@ -104,47 +97,45 @@ namespace Systems.SimpleInventory.Examples.Inventory
             sb.AppendLine($"Leggings: {(leggings ? leggings.name : "None")}");
             sb.AppendLine($"Boots: {(boots ? boots.name : "None")}");
             Debug.Log(sb.ToString());
-
         }
 
-        [ContextMenu("Print all equippable items")]
-        public void PrintAllEquippableItems()
+        [ContextMenu("Print all equippable items")] public void PrintAllEquippableItems()
         {
             ROListAccess<EquippableItemBase> databaseItems = ItemsDatabase.GetAll<EquippableItemBase>();
             IReadOnlyList<EquippableItemBase> listAccess = databaseItems.List;
-            
+
             StringBuilder sb = new();
-            
+
             for (int i = 0; i < listAccess.Count; i++)
             {
                 sb.AppendLine($"{listAccess[i].name}");
-            } 
-            
+            }
+
             Debug.Log(sb.ToString());
             databaseItems.Release();
         }
 
-        protected override void OnItemAdded(in AddItemContext context, in OperationResult<int> resultAmountLeft)
+        protected override void OnItemAdded(in AddItemContext context, in OperationResult result, int amountLeft)
         {
-            base.OnItemAdded(in context,resultAmountLeft);
+            base.OnItemAdded(in context, result, amountLeft);
             Debug.Log($"Item added: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemAddFailed(in AddItemContext context, in OperationResult<int> resultAmountExpected)
+        protected override void OnItemAddFailed(in AddItemContext context, in OperationResult result)
         {
-            base.OnItemAddFailed(in context, resultAmountExpected);
+            base.OnItemAddFailed(in context, result);
             Debug.Log($"Item add failed: {context.itemInstance.Item.name}");
         }
 
-        protected override void OnItemTaken(in TakeItemContext context, in OperationResult<int> resultAmountLeft)
+        protected override void OnItemTaken(in TakeItemContext context, in OperationResult result, int amountLeft)
         {
-            base.OnItemTaken(in context, resultAmountLeft);
+            base.OnItemTaken(in context, result, amountLeft);
             Debug.Log($"Item taken: {context.itemInstance.name}");
         }
 
-        protected override void OnItemTakeFailed(in TakeItemContext context, in OperationResult<int> resultAmountExpected)
+        protected override void OnItemTakeFailed(in TakeItemContext context, in OperationResult result)
         {
-            base.OnItemTakeFailed(in context, resultAmountExpected);
+            base.OnItemTakeFailed(in context, result);
             Debug.Log($"Item take failed: {context.itemInstance.name}");
         }
     }

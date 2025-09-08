@@ -38,18 +38,18 @@ namespace Systems.SimpleInventory.Components.Items.Pickup
         /// <param name="toInventory">Inventory to pick up item to</param>
         public virtual void Pickup([NotNull] InventoryBase toInventory)
         {
-            OperationResult<int> amountLeft = toInventory.PickupItem(this, Amount);
-            if (!amountLeft) return;
+            OperationResult operationSuccess = toInventory.PickupItem(this, Amount, out int amountLeft);
+            if (!operationSuccess) return;
 
             // Pickup was performed, update amount and check object events for re-pooling or destroy
-            Amount = (int) amountLeft;
-            OnPickupAttemptComplete(amountLeft);
+            Amount = amountLeft;
+            OnPickupAttemptComplete(operationSuccess, amountLeft);
         }
 
         /// <summary>
         ///     Handles pickup performed, intended to be used for re-pooling or destroying the object,
         ///     can also trigger UI events when amount of picked up items is 0 to draw "Inventory full" message
         /// </summary>
-        protected internal abstract void OnPickupAttemptComplete(in OperationResult<int> amountLeft);
+        protected internal abstract void OnPickupAttemptComplete(in OperationResult result, int amountLeft);
     }
 }

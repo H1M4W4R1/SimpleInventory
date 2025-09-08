@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Systems.SimpleCore.Operations;
-using Systems.SimpleCore.Storage;
 using Systems.SimpleCore.Storage.Lists;
 using Systems.SimpleCore.Utility.Enums;
 using Systems.SimpleInventory.Abstract.Equipment;
@@ -73,7 +72,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             {
                 // Add item to inventory before removing slot
                 if (addItemsToInventory && inventory is not null)
-                    inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1);
+                    inventory.TryAddOrDrop(equipmentSlots[i].CurrentlyEquippedItem, 1, out _);
                 else if (addItemsToInventory)
                 {
                     Transform objTransform = ReferenceEquals(DropPositionFallback, null)
@@ -522,7 +521,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Add item to inventory if needed
             if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0 && context.inventory is not null)
-                context.inventory.TryAddOrDrop(context.item, 1, ActionSource.Internal);
+                context.inventory.TryAddOrDrop(context.item, 1,  out _, ActionSource.Internal);
             else if ((context.flags & EquipmentModificationFlags.ModifyInventory) != 0)
             {
                 Transform objTransform = ReferenceEquals(DropPositionFallback, null)
