@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Systems.SimpleInventory.Data.Items.Data
+namespace Systems.SimpleInventory.Abstract.Data
 {
     /// <summary>
     ///     Object used to store item data, to be extended to collect

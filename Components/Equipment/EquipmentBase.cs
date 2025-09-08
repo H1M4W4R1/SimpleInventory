@@ -5,13 +5,13 @@ using Systems.SimpleCore.Operations;
 using Systems.SimpleCore.Storage;
 using Systems.SimpleCore.Storage.Lists;
 using Systems.SimpleCore.Utility.Enums;
+using Systems.SimpleInventory.Abstract.Equipment;
+using Systems.SimpleInventory.Abstract.Items;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Components.Items.Pickup;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Enums;
-using Systems.SimpleInventory.Data.Equipment;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Base;
 using Systems.SimpleInventory.Operations;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -411,7 +411,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (equippableItemRef.IsEquipped(context))
             {
                 if (actionSource == ActionSource.Internal) return EquipmentOperations.AlreadyEquipped();
-                OnItemAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
+                OnItemEquipWhenAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
                 return EquipmentOperations.AlreadyEquipped();
             }
 
@@ -420,7 +420,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (!canEquipResult && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
                 if (actionSource == ActionSource.Internal) return canEquipResult;
-                OnItemCannotBeEquipped(context, canEquipResult);
+                OnItemEquipWhenCannotBeEquipped(context, canEquipResult);
                 return canEquipResult;
             }
 
@@ -431,7 +431,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (slot == null)
             {
                 if (actionSource == ActionSource.Internal) return EquipmentOperations.NoFreeSlots();
-                OnItemCannotBeEquipped(context, EquipmentOperations.NoFreeSlots());
+                OnItemEquipWhenCannotBeEquipped(context, EquipmentOperations.NoFreeSlots());
                 return EquipmentOperations.NoFreeSlots();
             }
 
@@ -439,7 +439,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (ReferenceEquals(slot.CurrentlyEquippedItem, context.item))
             {
                 if (actionSource == ActionSource.Internal) return EquipmentOperations.AlreadyEquipped();
-                OnItemAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
+                OnItemEquipWhenAlreadyEquipped(context, EquipmentOperations.AlreadyEquipped());
                 return EquipmentOperations.AlreadyEquipped();
             }
 
@@ -469,7 +469,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Call events
             if (actionSource == ActionSource.Internal) return EquipmentOperations.Equipped();
-            OnItemEquipped(context, EquipmentOperations.Equipped());
+            OnItemEquippedSuccessfully(context, EquipmentOperations.Equipped());
             return EquipmentOperations.Equipped();
         }
 
@@ -489,7 +489,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (!equippableItemRef.IsEquipped(context))
             {
                 if (actionSource == ActionSource.Internal) return EquipmentOperations.NotEquipped();
-                OnItemAlreadyUnequipped(context, EquipmentOperations.NotEquipped());
+                OnItemUnequipWhenAlreadyUnequipped(context, EquipmentOperations.NotEquipped());
                 return EquipmentOperations.NotEquipped();
             }
 
@@ -498,7 +498,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             if (!canUnequipResult && (context.flags & EquipmentModificationFlags.IgnoreConditions) == 0)
             {
                 if (actionSource == ActionSource.Internal) return canUnequipResult;
-                OnItemCannotBeUnequipped(context, canUnequipResult);
+                OnItemUnequipWhenCannotBeUnequipped(context, canUnequipResult);
                 return canUnequipResult;
             }
 
@@ -508,7 +508,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Item is not equipped at all
             if (actionSource == ActionSource.Internal) return EquipmentOperations.NotEquipped();
-            OnItemCannotBeUnequipped(context, EquipmentOperations.NotEquipped());
+            OnItemUnequipWhenCannotBeUnequipped(context, EquipmentOperations.NotEquipped());
             return EquipmentOperations.NotEquipped();
         }
 
@@ -538,7 +538,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Call events
             if (actionSource == ActionSource.Internal) return EquipmentOperations.Unequipped();
-            OnItemUnequipped(context, EquipmentOperations.Unequipped());
+            OnItemUnequippedSucessfully(context, EquipmentOperations.Unequipped());
             return EquipmentOperations.Unequipped();
         }
 
@@ -566,34 +566,34 @@ namespace Systems.SimpleInventory.Components.Equipment
 
 #region Events
 
-        protected virtual void OnItemEquipped(in EquipItemContext context, in OperationResult result)
+        protected virtual void OnItemEquippedSuccessfully(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnEquip(context, result);
+            context.itemBase.OnEquipSuccess(context, result);
         }
 
-        protected virtual void OnItemUnequipped(in UnequipItemContext context, in OperationResult result)
+        protected virtual void OnItemUnequippedSucessfully(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnUnequip(context, result);
+            context.itemBase.OnUnequipSuccess(context, result);
         }
 
-        protected virtual void OnItemAlreadyEquipped(in EquipItemContext context, in OperationResult result)
+        protected virtual void OnItemEquipWhenAlreadyEquipped(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnAlreadyEquipped(context, result);
+            context.itemBase.OnEquipWhenAlreadyEquipped(context, result);
         }
 
-        protected virtual void OnItemAlreadyUnequipped(in UnequipItemContext context, in OperationResult result)
+        protected virtual void OnItemUnequipWhenAlreadyUnequipped(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnAlreadyUnequipped(context, result);
+            context.itemBase.OnUnequipWhenAlreadyUnequipped(context, result);
         }
 
-        protected virtual void OnItemCannotBeEquipped(in EquipItemContext context, in OperationResult result)
+        protected virtual void OnItemEquipWhenCannotBeEquipped(in EquipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnCannotBeEquipped(context, result);
+            context.itemBase.OnEquipWhenCannotBeEquipped(context, result);
         }
 
-        protected virtual void OnItemCannotBeUnequipped(in UnequipItemContext context, in OperationResult result)
+        protected virtual void OnItemUnequipWhenCannotBeUnequipped(in UnequipItemContext context, in OperationResult result)
         {
-            context.itemBase.OnCannotBeUnequipped(context, result);
+            context.itemBase.OnUnequipWhenCannotBeUnequipped(context, result);
         }
 
 #endregion

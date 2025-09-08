@@ -4,14 +4,15 @@ using Systems.SimpleCore.Automation.Attributes;
 using Systems.SimpleCore.Identifiers;
 using Systems.SimpleCore.Operations;
 using Systems.SimpleCore.Utility.Enums;
+using Systems.SimpleInventory.Abstract.Data;
 using Systems.SimpleInventory.Components.Items.Pickup;
+using Systems.SimpleInventory.Data;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Data;
 using Systems.SimpleInventory.Operations;
 using UnityEngine;
 
-namespace Systems.SimpleInventory.Data.Items.Base
+namespace Systems.SimpleInventory.Abstract.Items
 {
     /// <summary>
     ///     Basic class for inventory items - should be used as base for all inventory items

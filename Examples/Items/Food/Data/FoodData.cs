@@ -1,5 +1,5 @@
 ﻿using System;
-using Systems.SimpleInventory.Data.Items.Data;
+using Systems.SimpleInventory.Abstract.Data;
 using UnityEngine;
 using Random = UnityEngine.Random;
 

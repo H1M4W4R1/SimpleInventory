@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
+using Systems.SimpleInventory.Abstract.Items;
 using Systems.SimpleInventory.Components.Inventory;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Base;
 
 namespace Systems.SimpleInventory.Data.Context
 {

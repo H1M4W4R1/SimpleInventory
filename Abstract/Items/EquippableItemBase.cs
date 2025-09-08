@@ -2,7 +2,7 @@
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Operations;
 
-namespace Systems.SimpleInventory.Data.Items.Base
+namespace Systems.SimpleInventory.Abstract.Items
 {
     /// <summary>
     ///     Item that can be equipped.
@@ -42,31 +42,31 @@ namespace Systems.SimpleInventory.Data.Items.Base
         /// <summary>
         ///     Called when the item is equipped.
         /// </summary>
-        protected internal virtual void OnEquip(in EquipItemContext context, in OperationResult result){}
+        protected internal virtual void OnEquipSuccess(in EquipItemContext context, in OperationResult result){}
 
         /// <summary>
         ///     Called when the item is already equipped.
         /// </summary>
-        protected internal virtual void OnAlreadyEquipped(in EquipItemContext context, in OperationResult result){}
+        protected internal virtual void OnEquipWhenAlreadyEquipped(in EquipItemContext context, in OperationResult result){}
         
         /// <summary>
         ///     Called when the item cannot be equipped.
         /// </summary>
-        protected internal virtual void OnCannotBeEquipped(in EquipItemContext context, in OperationResult result){}
+        protected internal virtual void OnEquipWhenCannotBeEquipped(in EquipItemContext context, in OperationResult result){}
         
         /// <summary>
         ///     Called when the item is unequipped.
         /// </summary>
-        protected internal  virtual void OnUnequip(in UnequipItemContext context, in OperationResult result){}
+        protected internal  virtual void OnUnequipSuccess(in UnequipItemContext context, in OperationResult result){}
         
         /// <summary>
         ///     Called when item is already unequipped.
         /// </summary>
-        protected internal virtual void OnAlreadyUnequipped(in UnequipItemContext context, in OperationResult result){}
+        protected internal virtual void OnUnequipWhenAlreadyUnequipped(in UnequipItemContext context, in OperationResult result){}
         
         /// <summary>
         ///     Called when item cannot be unequipped.
         /// </summary>
-        protected internal virtual void OnCannotBeUnequipped(in UnequipItemContext context, in OperationResult result){}
+        protected internal virtual void OnUnequipWhenCannotBeUnequipped(in UnequipItemContext context, in OperationResult result){}
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
-using Systems.SimpleInventory.Data.Items.Base;
+using Systems.SimpleInventory.Abstract.Items;
 
-namespace Systems.SimpleInventory.Data.Equipment
+namespace Systems.SimpleInventory.Abstract.Equipment
 {
     /// <summary>
     ///     Default slot implementation

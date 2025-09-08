@@ -2,7 +2,7 @@
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Operations;
 
-namespace Systems.SimpleInventory.Data.Items.Base
+namespace Systems.SimpleInventory.Abstract.Items
 {
     /// <summary>
     ///     Item that can be used.

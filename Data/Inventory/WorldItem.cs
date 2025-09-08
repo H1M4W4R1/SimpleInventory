@@ -1,7 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
-using Systems.SimpleInventory.Data.Items.Base;
-using Systems.SimpleInventory.Data.Items.Data;
+using Systems.SimpleInventory.Abstract.Data;
+using Systems.SimpleInventory.Abstract.Items;
 using UnityEngine;
 
 namespace Systems.SimpleInventory.Data.Inventory

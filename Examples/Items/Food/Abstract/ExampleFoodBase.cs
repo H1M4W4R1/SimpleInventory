@@ -1,9 +1,9 @@
 ﻿using System;
 using Systems.SimpleCore.Operations;
+using Systems.SimpleInventory.Abstract.Data;
+using Systems.SimpleInventory.Abstract.Items;
 using Systems.SimpleInventory.Data.Context;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Base;
-using Systems.SimpleInventory.Data.Items.Data;
 using Systems.SimpleInventory.Examples.Items.Food.Data;
 using UnityEngine;
 

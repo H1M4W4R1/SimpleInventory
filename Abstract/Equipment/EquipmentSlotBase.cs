@@ -1,11 +1,11 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Systems.SimpleInventory.Abstract.Items;
 using Systems.SimpleInventory.Data.Inventory;
-using Systems.SimpleInventory.Data.Items.Base;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace Systems.SimpleInventory.Data.Equipment
+namespace Systems.SimpleInventory.Abstract.Equipment
 {
     public abstract class EquipmentSlotBase<TItemType> : EquipmentSlotBase
         where TItemType : EquippableItemBase
