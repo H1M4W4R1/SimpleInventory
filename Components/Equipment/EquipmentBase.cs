@@ -537,7 +537,7 @@ namespace Systems.SimpleInventory.Components.Equipment
 
             // Call events
             if (actionSource == ActionSource.Internal) return EquipmentOperations.Unequipped();
-            OnItemUnequippedSucessfully(context, EquipmentOperations.Unequipped());
+            OnItemUnequippedSuccessfully(context, EquipmentOperations.Unequipped());
             return EquipmentOperations.Unequipped();
         }
 
@@ -570,7 +570,7 @@ namespace Systems.SimpleInventory.Components.Equipment
             context.itemBase.OnEquipSuccess(context, result);
         }
 
-        protected virtual void OnItemUnequippedSucessfully(in UnequipItemContext context, in OperationResult result)
+        protected virtual void OnItemUnequippedSuccessfully(in UnequipItemContext context, in OperationResult result)
         {
             context.itemBase.OnUnequipSuccess(context, result);
         }

@@ -1087,7 +1087,7 @@ namespace Systems.SimpleInventory.Components.Inventory
             return opResult;
         }
 
-        protected int Take<TItemType>([NotNull] TItemType item, int amountToTake)
+        private int Take<TItemType>([NotNull] TItemType item, int amountToTake)
         {
             // Ensure proper type
             Assert.IsTrue(item is ItemBase || item is WorldItem, "Invalid item type");
